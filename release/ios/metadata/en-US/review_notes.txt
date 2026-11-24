@@ -1,5 +1,20 @@
-Catecash is a self-custody wallet. No account or login is required. To review wallet creation, tap Create new wallet and follow the recovery phrase backup flow. Open Receive to see a wallet address and QR code. Open Options > Server to see the connected server and network.
+App description
+Catecash is a self-custody iPhone and iPad wallet for CATE on the Catecash network. CATE holders need a mobile way to manage funds and verify transactions while retaining control of their recovery phrase. The app creates or restores a wallet on the device, shows balances and transaction history, displays receiving addresses and QR codes, and connects to a Catecash wallet server for chain data and transaction submission.
 
-The app uses the camera only when the reviewer chooses to scan a payment address. Face ID protects access when the reviewer enables the device lock setting.
+Instructions
+1. Open the app and tap Create new wallet. Follow the recovery phrase backup flow. No account, login, or demo credentials are required. Use a new review wallet rather than a personal recovery phrase.
+2. After the wallet opens, allow it to sync. The Home screen shows the balance and sync status. Tap Receive to view an address and QR code. Tap History to view transactions. A new empty wallet has no transaction history.
+3. Tap Options, then Server, to inspect the Catecash Mainnet connection. The default server is https://wallet.catecash.com:443. The reviewer can choose a custom server.
+4. Tap Send to enter a Catecash address or scan its QR code. The reviewer can inspect the Send form with a new wallet. A completed transfer requires a funded wallet and destination address. The app uses the camera only for an address scan. Face ID is optional when the device lock setting is enabled.
+5. To test recovery, use Restore wallet on the opening screen with the review wallet's recovery phrase, then allow the wallet to sync.
 
-For a transaction review, use the funded review wallet and transfer instructions supplied in the App Review contact details. Do not enter a personal recovery phrase.
+External services
+The default Catecash wallet endpoint, wallet.catecash.com, provides blockchain data and accepts signed transactions through the Catecash light-wallet service. Outgoing transactions use the Nym mixnet transport. Optional support and privacy links open catecash.com. Face ID uses Apple's on-device authentication. The app has no account authentication provider, AI model, fiat payment processor, or in-app purchase service.
+
+Regional differences
+The app is offered in the United States only. Its wallet features work the same throughout the United States, and it has no location-based feature switch. Network access to the Catecash endpoint and Nym is required for sync and sending.
+
+Authorization
+The wallet code derives from the MIT-licensed Zingo Mobile project, whose license is included in the source distribution. Catecash and its branding are intellectual property of Athena Live LLC, the submitting organization. Athena Live LLC owns catecash.com, catecash.net, and catecash.org. Regulatory credentials: not applicable to the wallet-only functions in this build. The app has no exchange, brokerage, custody, or fiat payment feature.
+
+The attached catecash.mov shows the app flow. The developer account holder has developed iOS apps since 2011.

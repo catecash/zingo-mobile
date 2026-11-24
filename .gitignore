@@ -6,6 +6,8 @@
 .env
 .env.*
 !.env.example
+/artifacts/
+/release/ios/screenshots/mainnet-326/
 
 # Xcode
 #

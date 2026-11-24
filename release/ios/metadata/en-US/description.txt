@@ -1,7 +1,7 @@
-Catecash is a self-custody wallet for CATE. Create a wallet on your device or restore one with a recovery phrase.
+CATE holders need a mobile way to manage funds and verify transactions while retaining control of their recovery phrase. Catecash provides a self-custody wallet for iPhone and iPad. Create a wallet on your device, or restore one with a recovery phrase.
 
-Send and receive CATE with an address or QR code. View your balance and transaction history as the wallet syncs with the Catecash network. The app shows balances by pool and lets you inspect sync progress.
+Receive CATE with a wallet address or QR code. Send CATE by entering an address or scanning a QR code. Review your balance and transaction history as the wallet syncs with the Catecash network.
 
-Keep track of your receiving addresses and saved contacts. Choose a Catecash server or enter one you trust.
+View balances by pool, inspect sync progress, and manage your receiving addresses and saved contacts. Use the default Catecash wallet server or choose a custom server.
 
-Your recovery phrase controls your wallet. Write it down and keep it somewhere safe. Catecash cannot recover it for you.
+No account is required. Write down your recovery phrase and keep it safe. Catecash cannot recover it for you.
