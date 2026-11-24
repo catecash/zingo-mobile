@@ -22,6 +22,7 @@ export type SegmentedOption<K extends string> = {
   key: K;
   label: string;
   testID: string;
+  disabled?: boolean;
 };
 
 type SegmentedSwitchProps<K extends string> = {
@@ -102,16 +103,22 @@ function SegmentedSwitch<K extends string>({
           key={option.key}
           testID={option.testID}
           onPress={() => onChange(option.key)}
-          disabled={disabled}
+          disabled={disabled || option.disabled}
           accessibilityRole="tab"
-          accessibilityState={{ selected: option.key === value }}
+          accessibilityState={{
+            selected: option.key === value,
+            disabled: disabled || option.disabled,
+          }}
           style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
         >
           <RegText
             style={{
               fontSize: 12.5,
               fontWeight: '600',
-              color: option.key === value ? colors.fgDefault : colors.fgMuted,
+              color:
+                option.disabled || option.key !== value
+                  ? colors.fgMuted
+                  : colors.fgDefault,
             }}
           >
             {option.label}

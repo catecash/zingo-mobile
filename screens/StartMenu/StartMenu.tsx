@@ -23,7 +23,11 @@ import {
 } from '@app/theme';
 
 import { ContextAppLoading } from '@app/context';
-import { getZingoName, getZingoVersion } from '@app/utils/ZingoAppData';
+import {
+  getZingoName,
+  getZingoVersion,
+  isCatecashApp,
+} from '@app/utils/ZingoAppData';
 import Text from '@ui/primitives/Text';
 import Button from '@ui/primitives/Button';
 import Card from '@ui/widgets/Card';
@@ -327,7 +331,13 @@ const StartMenu: React.FunctionComponent<StartMenuProps> = ({
               tone="muted"
               style={{ textAlign: 'center' }}
             >
-              {translate('loadingapp.tagline') as string}
+              {
+                translate(
+                  isCatecashApp()
+                    ? 'loadingapp.catecash-tagline'
+                    : 'loadingapp.tagline',
+                ) as string
+              }
             </Text>
           </Animated.View>
           {noInternet && !found && (

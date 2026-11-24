@@ -25,7 +25,7 @@ import InfoType from '@app/AppState/types/InfoType';
 import { fiatQuote } from '@app/price/fiatQuote';
 import ZecPriceType from '@app/AppState/types/ZecPriceType';
 import Utils from '@app/utils';
-import { formatUsd } from '@app/utils/formatAmount';
+import { formatAtomicAmount, formatUsd } from '@app/utils/formatAmount';
 import CurrencyAmount, { PriceTint } from '@ui/widgets/CurrencyAmount';
 import { MASK } from '@ui/widgets/PrivateAmount';
 import { useTimedReveal } from '@app/hooks/useTimedReveal';
@@ -191,7 +191,9 @@ const BalanceRow: React.FC<BalanceRowProps> = React.memo(
                 {balanceReveal.hidden
                   ? MASK
                   : /** Cut to four decimals, never rounded up. */
-                    Utils.splitZecAmountIntoBigSmall(fiatTotal).bigPart}
+                    totalBalance?.catecashAtomic
+                    ? formatAtomicAmount(totalBalance.catecashAtomic.total)
+                    : Utils.splitZecAmountIntoBigSmall(fiatTotal).bigPart}
               </Text>
             </Pressable>
             <Text variant="subtitle" tone="muted">

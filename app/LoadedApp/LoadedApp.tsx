@@ -75,7 +75,6 @@ import {
   NetInfoType,
   ValueTransferType,
   ValueTransferKindEnum,
-  CurrencyNameEnum,
   UnifiedAddressClass,
   TransparentAddressClass,
   AddressKindEnum,
@@ -96,6 +95,7 @@ import {
   substituteCurrency,
   substituteZingoName,
 } from '@app/utils/ZingoAppData';
+
 import { AppTheme } from '@app/theme';
 import SettingsFileImpl from '@app/services/SettingsFileImpl';
 import { PriceTrafficDriver } from '@ui/widgets/PriceFetcher';
@@ -192,6 +192,7 @@ import {
 } from '@app/services/walletHandoff';
 import { avatarCategoryOf } from '@ui/widgets/Avatar';
 import type { WalletEntry } from '@app/walletBackend';
+import { currencyForChain } from '@app/AppState/enums/CurrencyNameEnum';
 
 const en = require('@app/translations/en.json');
 const es = require('@app/translations/es.json');
@@ -322,9 +323,7 @@ export default function LoadedApp(props: LoadedAppProps) {
     () => (key: string) =>
       substituteCurrency(
         substituteZingoName(i18n.t(key) as TranslateType),
-        props.wallet.walletChainName === ChainNameEnum.mainChainName
-          ? CurrencyNameEnum.ZEC
-          : CurrencyNameEnum.TAZ,
+        currencyForChain(props.wallet.walletChainName),
       ),
     [i18n, language, props.wallet.walletChainName], // eslint-disable-line react-hooks/exhaustive-deps
   );
@@ -720,11 +719,9 @@ export class LoadedAppClass extends Component<
       // The currency is the wallet's from the start: when no server answers
       // (no network) the info never arrives, and amounts read "---".
       info: {
-        currencyName:
-          (props.walletChainName || props.server.chainName) ===
-          ChainNameEnum.mainChainName
-            ? CurrencyNameEnum.ZEC
-            : CurrencyNameEnum.TAZ,
+        currencyName: currencyForChain(
+          props.walletChainName || props.server.chainName,
+        ),
       } as InfoType,
       syncingStatus: {} as RPCSyncStatusType,
       rescan: 'none',
@@ -1300,10 +1297,12 @@ export class LoadedAppClass extends Component<
       this.setState({ totalBalance });
       writeSavedBalance(
         this.state.walletId,
-        totalBalance.totalIronwoodBalance +
-          totalBalance.totalOrchardBalance +
-          totalBalance.totalSaplingBalance +
-          totalBalance.totalTransparentBalance,
+        totalBalance.catecashAtomic
+          ? { atomic: totalBalance.catecashAtomic.total }
+          : totalBalance.totalIronwoodBalance +
+              totalBalance.totalOrchardBalance +
+              totalBalance.totalSaplingBalance +
+              totalBalance.totalTransparentBalance,
       ).catch(e => console.log(`saved balance not written: ${e}`));
     }
     this.arrived('balance');
@@ -1601,10 +1600,7 @@ export class LoadedAppClass extends Component<
         if (this.state.info.currencyName) {
           newInfo.currencyName = this.state.info.currencyName;
         } else {
-          newInfo.currencyName =
-            fallbackChain === ChainNameEnum.mainChainName
-              ? CurrencyNameEnum.ZEC
-              : CurrencyNameEnum.TAZ;
+          newInfo.currencyName = currencyForChain(fallbackChain);
         }
       }
       if (!newInfo.chainName) {

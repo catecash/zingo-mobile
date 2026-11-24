@@ -19,6 +19,8 @@ import { mockTranslate } from '../__mocks__/dataMocks/mockTranslate';
 import { mockAddresses } from '../__mocks__/dataMocks/mockAddresses';
 import { HomeTabScreenProps } from '@app/types';
 import mockNavigation from '../__mocks__/dataMocks/mockNavigation';
+import * as ZingoAppData from '@app/utils/ZingoAppData';
+import * as walletNavigation from '@app/navigation/navigate';
 
 const props: HomeTabScreenProps<'History'> = {
   navigation: mockNavigation,
@@ -52,5 +54,30 @@ describe('History when the wallet has no activity', () => {
     fireEvent.press(screen.getByTestId('history.empty.receive'));
 
     expect(mockNavigation.navigate).toHaveBeenCalledWith(Route.Receive);
+  });
+
+  test('Tests that a Catecash build offers a CATE wallet when the open wallet uses ZEC', async () => {
+    const catecash = jest.spyOn(ZingoAppData, 'isCatecashApp').mockReturnValue(true);
+    const addWallet = jest.spyOn(walletNavigation, 'navigateWallet').mockImplementation(() => {});
+    const state = {
+      ...defaultAppContextLoaded,
+      valueTransfers: [],
+      addresses: mockAddresses,
+      translate: mockTranslate,
+      info: mockInfo,
+      totalBalance: mockTotalBalance,
+    };
+
+    const screen = render(
+      <ContextAppLoadedProvider value={state}>
+        <History {...props} />
+      </ContextAppLoadedProvider>,
+    );
+    await act(async () => {});
+    fireEvent.press(screen.getByTestId('history.empty.receive'));
+
+    expect(addWallet).toHaveBeenCalledWith({ screen: Route.AddWallet });
+    catecash.mockRestore();
+    addWallet.mockRestore();
   });
 });

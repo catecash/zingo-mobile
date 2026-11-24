@@ -136,6 +136,36 @@ describe('ContactSheet', () => {
     fireEvent.press(screen.getByTestId('addressbook.save'));
     expect(onSave).not.toHaveBeenCalled();
   });
+
+  test('Tests that a name suffix in the address field follows address validation', async () => {
+    const onSave = jest.fn();
+    const screen = render(
+      <ContextAppLoadedProvider
+        value={{ ...defaultAppContextLoaded, translate: (key: string) => key }}
+      >
+        <ContactSheet
+          edit={{ kind: 'new', preset: '', label: '', chain: 'ZEC' }}
+          book={[]}
+          walletChain={ChainNameEnum.catecashDevnetChainName}
+          onSave={onSave}
+        />
+      </ContextAppLoadedProvider>,
+    );
+    fireEvent.changeText(screen.getByTestId('addressbook.name-field'), 'Bob');
+    fireEvent.changeText(
+      screen.getByTestId('addressbook.address-field'),
+      'bob.zec',
+    );
+    fireEvent(screen.getByTestId('addressbook.address-field'), 'blur');
+    await act(async () => {
+      jest.advanceTimersByTime(600);
+    });
+    expect(screen.getByTestId('addressbook.note.err')).toHaveTextContent(
+      'send.invalidaddress',
+    );
+    fireEvent.press(screen.getByTestId('addressbook.save'));
+    expect(onSave).not.toHaveBeenCalled();
+  });
 });
 
 describe('ContactSheet chain', () => {

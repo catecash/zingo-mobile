@@ -96,6 +96,8 @@ import { useFreshRows } from './useFreshRows';
 import { FiltersIcon } from '@ui/primitives/Icons/FiltersIcon';
 import { XIcon } from '@ui/primitives/Icons/XIcon';
 import { onTabScrollY } from '@app/navigation/tabBarScroll';
+import { navigateWallet } from '@app/navigation/navigate';
+import { isCatecashApp } from '@app/utils/ZingoAppData';
 import { useScrollEdges } from '@ui/widgets/ScrollEdges';
 import { PANEL_TOP } from '@ui/widgets/Header/Header';
 import { ChevronUp } from '@ui/primitives/Icons/Chevron';
@@ -232,6 +234,11 @@ const History: React.FunctionComponent<HistoryProps> = () => {
   const showSeedNotice = !readOnly && !seedBackedUp;
 
   const showPrice = fiatQuote(zecPrice, server, info.chainName).kind !== 'none';
+  const showCatecashWalletPrompt =
+    isCatecashApp() &&
+    info.chainName !== ChainNameEnum.catecashDevnetChainName &&
+    info.chainName !== ChainNameEnum.catecashTestnetChainName &&
+    info.chainName !== ChainNameEnum.catecashMainnetChainName;
 
   const notices: Notice[] = [];
   if (showShieldButton) {
@@ -1111,14 +1118,30 @@ const History: React.FunctionComponent<HistoryProps> = () => {
                         textAlign: 'center',
                       }}
                     >
-                      {translate('history.empty-text') as string}
+                      {
+                        translate(
+                          showCatecashWalletPrompt
+                            ? 'history.catecash-wallet-text'
+                            : 'history.empty-text',
+                        ) as string
+                      }
                     </Text>
                     <Button
                       testID="history.empty.receive"
                       variant="primary"
                       inline
-                      title={translate('history.empty-receive') as string}
-                      onPress={() => navigation.navigate(Route.Receive)}
+                      title={
+                        translate(
+                          showCatecashWalletPrompt
+                            ? 'history.catecash-wallet-add'
+                            : 'history.empty-receive',
+                        ) as string
+                      }
+                      onPress={() =>
+                        showCatecashWalletPrompt
+                          ? navigateWallet({ screen: Route.AddWallet })
+                          : navigation.navigate(Route.Receive)
+                      }
                       style={{ marginTop: space24 }}
                     />
                   </Animated.View>

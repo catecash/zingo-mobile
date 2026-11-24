@@ -9,12 +9,7 @@ import React, {
 import { View } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useSharedValue } from 'react-native-reanimated';
-import {
-  ChainNameEnum,
-  CurrencyNameEnum,
-  Route,
-  SelectServerEnum,
-} from '@app/AppState';
+import { ChainNameEnum, Route, SelectServerEnum } from '@app/AppState';
 import { ContextAppLoaded } from '@app/context';
 import {
   iconSizeSm,
@@ -32,6 +27,8 @@ import { readSavedBalances, SavedBalance } from '@app/services/savedBalance';
 import SettingsFileImpl from '@app/services/SettingsFileImpl';
 import { SwapStore } from '@app/swap';
 import { formatZecAmount } from '@app/utils/formatZecAmount';
+import { formatAtomicAmount } from '@app/utils/formatAmount';
+import { currencyForChain } from '@app/AppState/enums/CurrencyNameEnum';
 import type { WalletEntry } from '@app/walletBackend';
 import { updateWalletMeta } from '@app/walletBackend';
 import { useAuthorize } from '@app/hooks/useAuthorize';
@@ -70,6 +67,9 @@ const NETWORKS = [
   ChainNameEnum.mainChainName,
   ChainNameEnum.testChainName,
   ChainNameEnum.regtestChainName,
+  ChainNameEnum.catecashDevnetChainName,
+  ChainNameEnum.catecashTestnetChainName,
+  ChainNameEnum.catecashMainnetChainName,
 ];
 
 const categoryOf = (wallet: WalletEntry): AvatarCategory =>
@@ -148,12 +148,18 @@ export default function WalletsSheet() {
     if (!saved || saved.kind === 'none') {
       return type;
     }
-    const unit =
-      wallet.meta.chain === ChainNameEnum.mainChainName
-        ? CurrencyNameEnum.ZEC
-        : CurrencyNameEnum.TAZ;
+    const unit = currencyForChain(
+      wallet.meta.chain || ChainNameEnum.mainChainName,
+    );
     const sub = t('wallets.row-sub')
-      .replace('{balance}', privacy ? MASK : formatZecAmount(saved.total))
+      .replace(
+        '{balance}',
+        privacy
+          ? MASK
+          : saved.atomic !== undefined
+            ? formatAtomicAmount(saved.atomic)
+            : formatZecAmount(saved.total),
+      )
       .replace('{unit}', unit)
       .replace('{type}', type);
     return type ? sub : sub.replace(/ · $/, '');

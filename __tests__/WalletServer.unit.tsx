@@ -16,6 +16,7 @@ import { remoteServer } from '@app/AppState/types/ServerType';
 import WalletServer from '@screens/Server/WalletServer';
 import { pickAutomatic } from '@app/services/serverPicking';
 import SettingsFileImpl from '@app/services/SettingsFileImpl';
+import { getApplicationName } from 'react-native-device-info';
 
 jest.mock('@app/walletBackend', () => ({ probeServer: jest.fn() }));
 jest.mock('@app/services/SettingsFileImpl', () => ({
@@ -43,7 +44,13 @@ const en = require('../app/translations/en.json');
 const translate = (key: string): TranslateType =>
   key.split('.').reduce((o, k) => o?.[k], en) ?? key;
 
-const mount = (setServerOption: jest.Mock, forWallet = '') => {
+const mount = (
+  setServerOption: jest.Mock,
+  forWallet = '',
+  chain = ChainNameEnum.mainChainName,
+  otherChain = chain,
+  switchWallet = jest.fn(),
+) => {
   const navigation = {
     navigate: jest.fn(),
     goBack: jest.fn(),
@@ -61,9 +68,10 @@ const mount = (setServerOption: jest.Mock, forWallet = '') => {
           ChainNameEnum.mainChainName,
         ),
         selectServer: SelectServerEnum.list,
-        walletChainName: ChainNameEnum.mainChainName,
+        walletChainName: chain,
         netInfo: { ...defaultAppContextLoaded.netInfo, isConnected: true },
         setServerOption,
+        switchWallet,
         walletId: 'w1',
         wallets: ['w1', 'w2'].map((id, i) => ({
           id,
@@ -74,7 +82,7 @@ const mount = (setServerOption: jest.Mock, forWallet = '') => {
             order: i + 1,
             createdAt: 0,
             name: `Wallet ${i + 1}`,
-            chain: ChainNameEnum.mainChainName,
+            chain: i === 0 ? chain : otherChain,
           },
         })),
       }}
@@ -93,6 +101,66 @@ const mount = (setServerOption: jest.Mock, forWallet = '') => {
   );
   return navigation;
 };
+
+test('Tests that Settings Server opens a Testnet wallet flow for a Devnet wallet with a stale saved server', () => {
+  const appName = getApplicationName as jest.Mock;
+  appName.mockReturnValue('Catecash');
+  try {
+    const navigation = mount(
+      jest.fn(),
+      '',
+      ChainNameEnum.catecashDevnetChainName,
+    );
+    const testnet = screen.getByTestId('server.net.catecash-testnet');
+    expect(testnet.props.accessibilityState.disabled).toBe(false);
+    fireEvent.press(testnet);
+    expect(navigation.navigate).toHaveBeenCalledWith(Route.AddWallet, {
+      initialChain: ChainNameEnum.catecashTestnetChainName,
+    });
+  } finally {
+    appName.mockReturnValue('Zingo');
+  }
+});
+
+test('Tests that Settings Server opens a Devnet wallet flow for a Testnet wallet', () => {
+  const appName = getApplicationName as jest.Mock;
+  appName.mockReturnValue('Catecash');
+  try {
+    const navigation = mount(
+      jest.fn(),
+      '',
+      ChainNameEnum.catecashTestnetChainName,
+    );
+    fireEvent.press(screen.getByTestId('server.net.catecash-devnet'));
+    expect(navigation.navigate).toHaveBeenCalledWith(Route.AddWallet, {
+      initialChain: ChainNameEnum.catecashDevnetChainName,
+    });
+  } finally {
+    appName.mockReturnValue('Zingo');
+  }
+});
+
+test('Tests that Settings Server opens an existing Devnet wallet when the current wallet uses Testnet', () => {
+  const appName = getApplicationName as jest.Mock;
+  appName.mockReturnValue('Catecash');
+  try {
+    const switchWallet = jest.fn().mockResolvedValue({ kind: 'opened' });
+    const navigation = mount(
+      jest.fn(),
+      '',
+      ChainNameEnum.catecashTestnetChainName,
+      ChainNameEnum.catecashDevnetChainName,
+      switchWallet,
+    );
+    fireEvent.press(screen.getByTestId('server.net.catecash-devnet'));
+    expect(navigation.navigate).toHaveBeenCalledWith(Route.Home);
+    expect(switchWallet).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'w2' }),
+    );
+  } finally {
+    appName.mockReturnValue('Zingo');
+  }
+});
 
 test('Tests that Automatic on the wallet’s network reconnects the wallet and stays', async () => {
   (pickAutomatic as jest.Mock).mockResolvedValue({

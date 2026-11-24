@@ -38,6 +38,7 @@ import ServerList from '@screens/ServerList';
 import Server from './Server';
 import Header from '@ui/widgets/Header';
 import SettingsFileImpl from '@app/services/SettingsFileImpl';
+import { isCatecashApp } from '@app/utils/ZingoAppData';
 import {
   setAddWalletDraft,
   useAddWalletDraft,
@@ -148,7 +149,12 @@ const WalletServer: React.FC<WalletServerProps> = ({ navigation, route }) => {
 
   const probeChain = useCallback(
     async (chain: ChainNameEnum) => {
-      if (chain === ChainNameEnum.regtestChainName) {
+      if (
+        chain === ChainNameEnum.regtestChainName ||
+        chain === ChainNameEnum.catecashDevnetChainName ||
+        chain === ChainNameEnum.catecashTestnetChainName ||
+        chain === ChainNameEnum.catecashMainnetChainName
+      ) {
         return;
       }
       const list =
@@ -326,7 +332,9 @@ const WalletServer: React.FC<WalletServerProps> = ({ navigation, route }) => {
               networkNote={
                 forDraft && draft.keyChain.kind === 'key'
                   ? (translate('server.from-key') as string)
-                  : undefined
+                  : networkLocked && isCatecashApp()
+                    ? (translate('server.catecash-network-locked') as string)
+                    : undefined
               }
               server={server}
               selectServer={selectServer}
@@ -345,7 +353,10 @@ const WalletServer: React.FC<WalletServerProps> = ({ navigation, route }) => {
               }
               onOffline={(on, chain) =>
                 on
-                  ? apply(offlineServer(walletChainName), selectServer)
+                  ? apply(
+                      offlineServer(networkLocked ? walletChainName : chain),
+                      selectServer,
+                    )
                   : chooseAutomatic(
                       chain === ChainNameEnum.regtestChainName
                         ? ChainNameEnum.mainChainName
@@ -355,6 +366,31 @@ const WalletServer: React.FC<WalletServerProps> = ({ navigation, route }) => {
               onOther={setOther}
               onProbe={probeChain}
               onUnreachable={unreachable}
+              onSwitchNetwork={
+                networkLocked && isCatecashApp()
+                  ? chain => {
+                      const existing = wallets.find(
+                        wallet =>
+                          wallet.meta.chain === chain &&
+                          !wallet.meta.openFailed,
+                      );
+                      if (existing) {
+                        navigation.navigate(Route.Home);
+                        if (existing.id !== walletId) {
+                          context.switchWallet(existing).catch(() =>
+                            addLastSnackbar(
+                              translate('wallets.cant-open') as string,
+                            ),
+                          );
+                        }
+                      } else {
+                        navigation.navigate(Route.AddWallet, {
+                          initialChain: chain,
+                        });
+                      }
+                    }
+                  : undefined
+              }
               onBack={close}
               backGuard={backGuard}
               onGuard={setGuarded}

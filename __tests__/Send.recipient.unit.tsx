@@ -11,7 +11,6 @@ import {
 } from '@app/context';
 import { AddressBookFileClass, ChainNameEnum } from '@app/AppState';
 import RecipientField from '@screens/Send/components/RecipientField';
-import type { NameLookup } from '@screens/Send/components/RecipientField';
 
 const irene = new AddressBookFileClass(
   'Irene',
@@ -25,7 +24,6 @@ const irene = new AddressBookFileClass(
 const field = (props: Partial<React.ComponentProps<typeof RecipientField>>) => {
   const handlers = {
     onPickContact: jest.fn(),
-    onPickName: jest.fn(),
     onSaveContact: jest.fn(),
   };
   const view = render(
@@ -45,9 +43,7 @@ const field = (props: Partial<React.ComponentProps<typeof RecipientField>>) => {
         onFocus={jest.fn()}
         onBlur={jest.fn()}
         contact={undefined}
-        pickedName=""
         matches={[]}
-        lookup={{ kind: 'none' }}
         onOpenBook={jest.fn()}
         onScan={jest.fn()}
         scanRef={React.createRef()}
@@ -61,34 +57,19 @@ const field = (props: Partial<React.ComponentProps<typeof RecipientField>>) => {
 };
 
 describe('RecipientField', () => {
-  test('Tests that typing a name lists the matching contacts and the name being looked up', () => {
-    const lookup: NameLookup = { kind: 'loading', name: 'ire.zec' };
-    const { view, handlers } = field({ text: 'ire', matches: [irene], lookup });
-    expect(view.getByTestId('send.results')).toHaveTextContent(
-      /send\.name-looking/,
-    );
+  test('Tests that a typed contact name lists the matching contact', () => {
+    const { view, handlers } = field({ text: 'ire', matches: [irene] });
+    expect(view.getByTestId('send.results')).toHaveTextContent(/Irene/);
     fireEvent.press(view.getByTestId('send.result.contact.Irene'));
     expect(handlers.onPickContact).toHaveBeenCalledWith(irene);
   });
 
-  test('Tests that a name nobody owns says so instead of an error', () => {
+  test('Tests that a Catecash address shows no name lookup row', () => {
     const { view } = field({
-      text: 'nobody',
-      lookup: { kind: 'missing', name: 'nobody.zec' },
+      text: 'ypkjvw6cqqb1mydycacufhsbgponih5tnbc',
+      valid: 1,
     });
-    expect(view.getByTestId('send.results')).toHaveTextContent(
-      /send\.name-nobody/,
-    );
-    expect(view.queryByTestId('send.addressplaceholder.error')).toBeNull();
-  });
-
-  test('Tests that a found name not in the book is picked with its address', () => {
-    const { view, handlers } = field({
-      text: 'maria',
-      lookup: { kind: 'found', name: 'maria.zec', address: 'u1maria' },
-    });
-    fireEvent.press(view.getByTestId('send.result.name'));
-    expect(handlers.onPickName).toHaveBeenCalledWith('maria.zec', 'u1maria');
+    expect(view.queryByTestId('send.results')).toBeNull();
   });
 
   test('Tests that a contact becomes a token with its name when the address is theirs', () => {

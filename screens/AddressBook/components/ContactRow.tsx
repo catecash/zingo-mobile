@@ -14,7 +14,7 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 import { textVariants, useTheme } from '@app/theme';
 import { duration, ease } from '@app/theme/motion';
-import { AddressBookFileClass } from '@app/AppState';
+import { AddressBookFileClass, ChainNameEnum } from '@app/AppState';
 import { ContextAppLoaded } from '@app/context';
 import Pressable from '@ui/primitives/Pressable';
 import Text from '@ui/primitives/Text';
@@ -135,7 +135,7 @@ const ContactRow: React.FunctionComponent<ContactRowProps> = ({
   onDelete,
   onLeft,
 }) => {
-  const { translate } = useContext(ContextAppLoaded);
+  const { translate, walletChainName } = useContext(ContextAppLoaded);
   const { colors } = useTheme();
   const [copied, setCopied] = useState(false);
   const busy = useRef(false);
@@ -322,7 +322,13 @@ const ContactRow: React.FunctionComponent<ContactRowProps> = ({
     }
   };
 
-  const ticker = contact.swapChain.toUpperCase();
+  const ticker =
+    (walletChainName === ChainNameEnum.catecashDevnetChainName ||
+      walletChainName === ChainNameEnum.catecashTestnetChainName ||
+      walletChainName === ChainNameEnum.catecashMainnetChainName) &&
+    contact.swapChain.toUpperCase() === 'ZEC'
+      ? 'CATE'
+      : contact.swapChain.toUpperCase();
   const isPublic = editable && /^t/i.test(contact.address);
 
   return (

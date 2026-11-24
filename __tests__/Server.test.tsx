@@ -17,6 +17,7 @@ import { offlineServer, remoteServer } from '@app/AppState/types/ServerType';
 import Server from '@screens/Server';
 import ServerList from '@screens/ServerList';
 import { probeServer } from '@app/walletBackend';
+import { getApplicationName } from 'react-native-device-info';
 
 jest.mock('@app/walletBackend', () => ({ probeServer: jest.fn() }));
 
@@ -24,6 +25,7 @@ const en = require('../app/translations/en.json');
 const translate = (key: string): TranslateType =>
   key.split('.').reduce((o, k) => o?.[k], en) ?? key;
 const probe = probeServer as jest.Mock;
+const appName = getApplicationName as jest.Mock;
 
 const entry = (
   uri: string,
@@ -105,7 +107,10 @@ const typeCustom = (text: string) => {
   fireEvent.changeText(screen.getByTestId('server.custom.host'), text);
 };
 
-beforeEach(() => probe.mockReset());
+beforeEach(() => {
+  probe.mockReset();
+  appName.mockReturnValue('Zingo');
+});
 
 test('Tests that Automatic and the recommended servers are on the main screen and Other servers drills in', () => {
   const h = handlers();
@@ -147,6 +152,254 @@ test('Tests that the rows are locked and the switch turns offline off when the a
   expect(h.onOther).not.toHaveBeenCalled();
   fireEvent.press(screen.getByTestId('server.offline'));
   expect(h.onOffline).toHaveBeenCalledWith(false, ChainNameEnum.mainChainName);
+});
+
+test('Catecash devnet accepts a matching local server from an offline wallet', async () => {
+  const h = handlers();
+  probe.mockResolvedValue(verified('catecash-devnet'));
+  mount(
+    {
+      server: offlineServer(ChainNameEnum.catecashDevnetChainName),
+      initialChain: ChainNameEnum.catecashDevnetChainName,
+    },
+    h,
+  );
+  expect(screen.getByText('Your Catecash Devnet server')).toBeOnTheScreen();
+  expect(screen.queryByTestId('server.auto')).toBeNull();
+  fireEvent.changeText(screen.getByTestId('server.custom.host'), '127.0.0.1');
+  fireEvent.changeText(screen.getByTestId('server.custom.port'), '9067');
+  await act(async () => {
+    fireEvent.press(screen.getByTestId('server.custom.save'));
+  });
+  expect(probe).toHaveBeenCalledWith('http://127.0.0.1:9067');
+  expect(h.onSaveCustom).toHaveBeenCalledWith(
+    ChainNameEnum.catecashDevnetChainName,
+    'http://127.0.0.1:9067',
+  );
+});
+
+test('Catecash devnet uses TLS for a public server', async () => {
+  const h = handlers();
+  probe.mockResolvedValue(verified('catecash-devnet'));
+  mount(
+    {
+      server: offlineServer(ChainNameEnum.catecashDevnetChainName),
+      initialChain: ChainNameEnum.catecashDevnetChainName,
+    },
+    h,
+  );
+  fireEvent.changeText(
+    screen.getByTestId('server.custom.host'),
+    '157.90.173.220',
+  );
+  fireEvent.changeText(screen.getByTestId('server.custom.port'), '443');
+  await act(async () => {
+    fireEvent.press(screen.getByTestId('server.custom.save'));
+  });
+  expect(probe).toHaveBeenCalledWith('https://157.90.173.220:443');
+  expect(h.onSaveCustom).toHaveBeenCalledWith(
+    ChainNameEnum.catecashDevnetChainName,
+    'https://157.90.173.220:443',
+  );
+});
+
+test('Tests that Catecash selects its testnet gateway when Testnet is pressed', () => {
+  appName.mockReturnValue('Catecash');
+  const h = handlers();
+  mount(
+    {
+      server: remoteServer(
+        'https://wallet-devnet.catecash.com:443',
+        ChainNameEnum.catecashDevnetChainName,
+      ),
+      initialChain: ChainNameEnum.catecashDevnetChainName,
+      recommended: [
+        entry(
+          'https://wallet-testnet.catecash.com:443',
+          ChainNameEnum.catecashTestnetChainName,
+          true,
+        ),
+      ],
+    },
+    h,
+  );
+  const mainnet = screen.getByTestId('server.net.catecash-mainnet');
+  const testnet = screen.getByTestId('server.net.catecash-testnet');
+  expect(mainnet.props.accessibilityState.disabled).not.toBe(true);
+  expect(testnet.props.accessibilityState.disabled).not.toBe(true);
+  fireEvent.press(testnet);
+  expect(h.onAuto).toHaveBeenCalledWith(ChainNameEnum.catecashTestnetChainName);
+  expect(
+    screen.getByTestId('server.net.catecash-testnet').props.accessibilityState
+      .selected,
+  ).toBe(true);
+  expect(screen.getByText('wallet-testnet.catecash.com')).toBeOnTheScreen();
+  expect(screen.queryByTestId('server.net.test')).toBeNull();
+});
+
+test('Tests that Catecash selects its mainnet gateway when Mainnet is pressed', () => {
+  appName.mockReturnValue('Catecash');
+  const h = handlers();
+  mount(
+    {
+      server: remoteServer(
+        'https://wallet-testnet.catecash.com:443',
+        ChainNameEnum.catecashTestnetChainName,
+      ),
+      initialChain: ChainNameEnum.catecashTestnetChainName,
+      recommended: [
+        entry(
+          'https://wallet.catecash.com:443',
+          ChainNameEnum.catecashMainnetChainName,
+          true,
+        ),
+      ],
+    },
+    h,
+  );
+  fireEvent.press(screen.getByTestId('server.net.catecash-mainnet'));
+  expect(h.onAuto).toHaveBeenCalledWith(ChainNameEnum.catecashMainnetChainName);
+  expect(screen.getByText('wallet.catecash.com')).toBeOnTheScreen();
+});
+
+test('Tests that Testnet opens wallet creation when the current Catecash wallet is fixed to Devnet', () => {
+  appName.mockReturnValue('Catecash');
+  const h = handlers();
+  const onSwitchNetwork = jest.fn();
+  mount(
+    {
+      server: remoteServer(
+        'https://wallet-devnet.catecash.com:443',
+        ChainNameEnum.catecashDevnetChainName,
+      ),
+      networkLocked: true,
+      onSwitchNetwork,
+    },
+    h,
+  );
+  const testnet = screen.getByTestId('server.net.catecash-testnet');
+  expect(testnet.props.accessibilityState.disabled).not.toBe(true);
+  fireEvent.press(testnet);
+  expect(onSwitchNetwork).toHaveBeenCalledTimes(1);
+  expect(h.onAuto).not.toHaveBeenCalled();
+  expect(
+    screen.getByTestId('server.net.catecash-devnet').props.accessibilityState
+      .selected,
+  ).toBe(true);
+});
+
+test('Tests that Testnet opens wallet creation when the Devnet wallet is offline', () => {
+  appName.mockReturnValue('Catecash');
+  const onSwitchNetwork = jest.fn();
+  mount(
+    {
+      server: offlineServer(ChainNameEnum.catecashDevnetChainName),
+      networkLocked: true,
+      onSwitchNetwork,
+    },
+  );
+  const testnet = screen.getByTestId('server.net.catecash-testnet');
+  expect(testnet.props.accessibilityState.disabled).toBe(false);
+  fireEvent.press(testnet);
+  expect(onSwitchNetwork).toHaveBeenCalledTimes(1);
+});
+
+test('Tests that a Devnet wallet can open Testnet when its saved server has another chain', () => {
+  appName.mockReturnValue('Catecash');
+  const onSwitchNetwork = jest.fn();
+  mount({
+    server: remoteServer(
+      'https://old.example:443',
+      ChainNameEnum.mainChainName,
+    ),
+    initialChain: ChainNameEnum.catecashDevnetChainName,
+    networkLocked: true,
+    onSwitchNetwork,
+  });
+  const testnet = screen.getByTestId('server.net.catecash-testnet');
+  expect(testnet.props.accessibilityState.disabled).toBe(false);
+  fireEvent.press(testnet);
+  expect(onSwitchNetwork).toHaveBeenCalledTimes(1);
+});
+
+test('Tests that the Catecash Testnet wallet flow remains available when the current wallet chain is unknown', () => {
+  appName.mockReturnValue('Catecash');
+  const onSwitchNetwork = jest.fn();
+  mount({
+    server: remoteServer('https://old.example:443', ChainNameEnum.mainChainName),
+    initialChain: ChainNameEnum.noneChainName,
+    networkLocked: true,
+    onSwitchNetwork,
+  });
+  const testnet = screen.getByTestId('server.net.catecash-testnet');
+  expect(testnet.props.accessibilityState.disabled).toBe(false);
+  fireEvent.press(testnet);
+  expect(onSwitchNetwork).toHaveBeenCalledTimes(1);
+});
+
+test('Tests that a Testnet wallet shows Testnet as its selected network when its server has another chain', () => {
+  appName.mockReturnValue('Catecash');
+  mount({
+    server: remoteServer(
+      'https://old.example:443',
+      ChainNameEnum.catecashDevnetChainName,
+    ),
+    initialChain: ChainNameEnum.catecashTestnetChainName,
+    networkLocked: true,
+    onSwitchNetwork: jest.fn(),
+  });
+  const testnet = screen.getByTestId('server.net.catecash-testnet');
+  expect(testnet.props.accessibilityState.selected).toBe(true);
+  expect(testnet.props.accessibilityState.disabled).toBe(false);
+});
+
+test('Tests that Devnet opens the network switch when the current Catecash wallet uses Testnet', () => {
+  appName.mockReturnValue('Catecash');
+  const onSwitchNetwork = jest.fn();
+  mount({
+    server: remoteServer(
+      'https://wallet-testnet.catecash.com:443',
+      ChainNameEnum.catecashTestnetChainName,
+    ),
+    initialChain: ChainNameEnum.catecashTestnetChainName,
+    networkLocked: true,
+    onSwitchNetwork,
+  });
+  const devnet = screen.getByTestId('server.net.catecash-devnet');
+  expect(devnet.props.accessibilityState.disabled).toBe(false);
+  fireEvent.press(devnet);
+  expect(onSwitchNetwork).toHaveBeenCalledWith(
+    ChainNameEnum.catecashDevnetChainName,
+  );
+});
+
+test('Tests that an offline Catecash wallet draft selects Testnet', () => {
+  appName.mockReturnValue('Catecash');
+  const h = handlers();
+  mount(
+    {
+      server: offlineServer(ChainNameEnum.catecashDevnetChainName),
+    },
+    h,
+  );
+  fireEvent.press(screen.getByTestId('server.net.catecash-testnet'));
+  expect(h.onAuto).toHaveBeenCalledWith(ChainNameEnum.catecashTestnetChainName);
+});
+
+test('Tests that a Catecash wallet draft can return from Testnet to Devnet', () => {
+  appName.mockReturnValue('Catecash');
+  const h = handlers();
+  mount(
+    {
+      server: remoteServer(
+        'https://wallet-testnet.catecash.com:443',
+        ChainNameEnum.catecashTestnetChainName,
+      ),
+    },
+    h,
+  );
+  fireEvent.press(screen.getByTestId('server.net.catecash-devnet'));
+  expect(h.onAuto).toHaveBeenCalledWith(ChainNameEnum.catecashDevnetChainName);
 });
 
 test('Tests that pasting a full address splits it into host and port', () => {

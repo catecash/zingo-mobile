@@ -68,6 +68,7 @@ const ValueTransferDetail: React.FunctionComponent<
     language,
     addLastSnackbar,
     server,
+    walletChainName,
     addressBook,
     addresses,
     setBackgroundError,
@@ -199,9 +200,12 @@ const ValueTransferDetail: React.FunctionComponent<
   const explorerUrl =
     vt.txid &&
     !failed &&
-    server.chainName !== ChainNameEnum.regtestChainName &&
-    blockExplorer !== BlockExplorerEnum.None
-      ? Utils.getBlockExplorerTxIDURL(vt.txid, server.chainName, blockExplorer)
+    walletChainName !== ChainNameEnum.regtestChainName &&
+    (walletChainName === ChainNameEnum.catecashDevnetChainName ||
+      walletChainName === ChainNameEnum.catecashTestnetChainName ||
+      walletChainName === ChainNameEnum.catecashMainnetChainName ||
+      blockExplorer !== BlockExplorerEnum.None)
+      ? Utils.getBlockExplorerTxIDURL(vt.txid, walletChainName, blockExplorer)
       : '';
 
   /** A failed send goes back to Send with what it carried, to send again. */

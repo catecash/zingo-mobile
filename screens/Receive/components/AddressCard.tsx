@@ -1,6 +1,6 @@
 /* eslint-disable react-native/no-inline-styles */
 import React, { useContext, useEffect } from 'react';
-import { View } from 'react-native';
+import { Image, useWindowDimensions, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import Animated, {
   ReduceMotion,
@@ -18,6 +18,7 @@ import {
   space8,
   space12,
   space16,
+  space20,
   touchTarget,
   useTheme,
   slopFor,
@@ -125,15 +126,31 @@ export default function AddressCard({
   onVerify,
   onAddTag,
 }: AddressCardProps) {
-  const { translate } = useContext(ContextAppLoaded);
+  const { translate, info } = useContext(ContextAppLoaded);
   const { colors } = useTheme();
+  const { width: windowWidth } = useWindowDimensions();
   const t = (key: string) => translate(key) as string;
   const transparent = address.addressKind === AddressKindEnum.t;
   /** Only the icon carries the pool's colour; its name reads in the text colour. */
   const kindColor = transparent ? colors.fgTransparent : colors.fgAccent;
+  const bannerWidth = windowWidth - space20 * 2;
 
   return (
     <View style={{ gap: space16 }}>
+      {(info.chainName === 'catecash-devnet' ||
+        info.chainName === 'catecash-testnet' ||
+        info.chainName === 'catecash-mainnet') && (
+        <Image
+          source={require('../../../assets/catecash/banknote-receive-wide-v2.webp')}
+          accessibilityLabel="Catecash cat and coin banner artwork"
+          style={{
+            width: bannerWidth,
+            height: bannerWidth / 3,
+            borderRadius: radiusMd,
+          }}
+          resizeMode="contain"
+        />
+      )}
       <View testID="receive.card">
         <Card>
           <View style={{ alignItems: 'center', gap: space12 }}>
@@ -170,7 +187,7 @@ export default function AddressCard({
                 ecl="L"
                 color={colors.fgQrInk}
                 backgroundColor={colors.bgQrPaper}
-                logo={getZingoLogo()}
+                logo={getZingoLogo(info.chainName)}
                 logoSize={30}
                 logoBackgroundColor={colors.bgQrPaper}
                 logoBorderRadius={radiusSm}

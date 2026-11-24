@@ -2,12 +2,15 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Route } from '@app/AppState';
+import { ChainNameEnum, Route, SelectServerEnum } from '@app/AppState';
+import { offlineServer, remoteServer } from '@app/AppState/types/ServerType';
+import { serverUris } from '@app/uris';
 import { ContextAppLoaded } from '@app/context';
 import { AppDrawerParamList } from '@app/types';
 import { space8, space16, space20, useTheme } from '@app/theme';
 import SettingsFileImpl from '@app/services/SettingsFileImpl';
 import { setAddWalletDraft } from '@app/services/addWalletDraft';
+import { isCatecashApp } from '@app/utils/ZingoAppData';
 import { recoveryEntriesOnDevice } from '@app/services/recoveryWalletInfo';
 import { HistoryIcon } from '@ui/primitives/Icons/HistoryIcon';
 import Text from '@ui/primitives/Text';
@@ -22,7 +25,7 @@ import { useScrollEdges } from '@ui/widgets/ScrollEdges';
 type AddWalletProps = NativeStackScreenProps<AppDrawerParamList, 'AddWallet'>;
 
 /** Where a new wallet comes from: made here, or restored from a seed phrase or a viewing key. */
-const AddWallet: React.FC<AddWalletProps> = ({ navigation }) => {
+const AddWallet: React.FC<AddWalletProps> = ({ navigation, route }) => {
   const { translate } = useContext(ContextAppLoaded);
   const t = (key: string) => translate(key) as string;
   const { colors } = useTheme();
@@ -35,10 +38,42 @@ const AddWallet: React.FC<AddWalletProps> = ({ navigation }) => {
 
   /** A new wallet starts on the server the next one defaults to. */
   useEffect(() => {
-    SettingsFileImpl.serverOf({}).then(({ server, selectServer }) =>
-      setAddWalletDraft({ server, selectServer, keyChain: { kind: 'none' } }),
-    );
-  }, []);
+    if (
+      route.params?.initialChain === ChainNameEnum.catecashDevnetChainName ||
+      route.params?.initialChain === ChainNameEnum.catecashTestnetChainName ||
+      route.params?.initialChain === ChainNameEnum.catecashMainnetChainName
+    ) {
+      const chain = route.params.initialChain;
+      const gateway = serverUris(() => {}).find(
+        s => s.chainName === chain && s.default,
+      )!;
+      setAddWalletDraft({
+        server: remoteServer(gateway.uri, chain),
+        selectServer: SelectServerEnum.auto,
+        keyChain: { kind: 'none' },
+      });
+      return;
+    }
+    SettingsFileImpl.serverOf({}).then(({ server, selectServer }) => {
+      const catecashDefault =
+        isCatecashApp() &&
+        server.chainName !== ChainNameEnum.catecashDevnetChainName &&
+        server.chainName !== ChainNameEnum.catecashTestnetChainName &&
+        server.chainName !== ChainNameEnum.catecashMainnetChainName;
+      setAddWalletDraft({
+        server: catecashDefault
+          ? remoteServer(
+              serverUris(() => {}).find(
+                s => s.chainName === ChainNameEnum.catecashMainnetChainName && s.default,
+              )!.uri,
+              ChainNameEnum.catecashMainnetChainName,
+            )
+          : server,
+        selectServer: catecashDefault ? SelectServerEnum.custom : selectServer,
+        keyChain: { kind: 'none' },
+      });
+    });
+  }, [route.params?.initialChain]);
 
   const group = (label: string, first: boolean) => (
     <Text

@@ -12,6 +12,7 @@ import { useTheme } from '@app/theme';
 import {
   AddressBookFileClass,
   AddressKindEnum,
+  ChainNameEnum,
   GlobalConst,
   Route,
   SendPageStateClass,
@@ -170,6 +171,10 @@ const AddressBook: React.FunctionComponent<AddressBookProps> = ({
   const { edges, fades } = useScrollEdges();
   const bottomPad = useBottomActionPad();
   const walletChain = walletChainName || server.chainName;
+  const catecash =
+    walletChain === ChainNameEnum.catecashDevnetChainName ||
+    walletChain === ChainNameEnum.catecashTestnetChainName ||
+    walletChain === ChainNameEnum.catecashMainnetChainName;
 
   const [query, setQuery] = useState('');
   const [openAddress, setOpenAddress] = useState('');
@@ -370,7 +375,9 @@ const AddressBook: React.FunctionComponent<AddressBookProps> = ({
       : !pick
         ? (translate('addressbook.empty') as string)
         : pickZcash
-          ? (translate('addressbook.no-zcash') as string)
+          ? (translate(
+              catecash ? 'addressbook.no-catecash' : 'addressbook.no-zcash',
+            ) as string)
           : (translate('addressbook.no-chain') as string).replace(
               '{chain}',
               chainDisplayName(pickChain) || pickChain,

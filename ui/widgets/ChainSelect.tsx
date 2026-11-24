@@ -80,6 +80,7 @@ type ChainSelectProps = {
   options: string[];
   onChange: (chain: string) => void;
   translate: (key: string) => TranslateType;
+  nativeAsset?: { name: string; ticker: string };
   disabled?: boolean;
 };
 
@@ -89,12 +90,24 @@ const ChainSelect: React.FunctionComponent<ChainSelectProps> = ({
   options,
   onChange,
   translate,
+  nativeAsset,
   disabled,
 }) => {
   const { colors } = useTheme();
   const sheetRef = useRef<BottomSheetModal>(null);
   const [query, setQuery] = useState<string>('');
   const canPick = !disabled && options.length > 1;
+  const shownTicker = (chain: string) =>
+    chain.toUpperCase() === 'ZEC' && nativeAsset
+      ? nativeAsset.ticker
+      : chain.toUpperCase();
+  const shownName = useCallback(
+    (chain: string) =>
+      chain.toUpperCase() === 'ZEC' && nativeAsset
+        ? nativeAsset.name
+        : chainDisplayName(chain),
+    [nativeAsset],
+  );
 
   const t = useCallback(
     (key: string, fallback: string): string =>
@@ -116,10 +129,10 @@ const ChainSelect: React.FunctionComponent<ChainSelectProps> = ({
     }
     return options.filter(chain => {
       const code = (chain ?? '').toLowerCase();
-      const name = chainDisplayName(chain).toLowerCase();
+      const name = shownName(chain).toLowerCase();
       return code.includes(q) || name.includes(q);
     });
-  }, [options, query]);
+  }, [options, query, shownName]);
 
   return (
     <View>
@@ -149,7 +162,7 @@ const ChainSelect: React.FunctionComponent<ChainSelectProps> = ({
           marginTop: space8,
         }}
       >
-        <ChainLogo chain={value} size={24} />
+        <ChainLogo chain={shownTicker(value)} size={24} />
         <RegText
           style={{
             flex: 1,
@@ -158,13 +171,13 @@ const ChainSelect: React.FunctionComponent<ChainSelectProps> = ({
             fontSize: 15,
           }}
         >
-          {chainDisplayName(value)}
+          {shownName(value)}
         </RegText>
         <FadeText
           testID="chainselect.ticker"
           style={{ fontSize: 12, letterSpacing: 0.4 }}
         >
-          {(value || '').toUpperCase()}
+          {shownTicker(value)}
         </FadeText>
         {canPick ? <ChevronDown size={16} color={colors.fgMuted} /> : null}
       </Pressable>
@@ -224,7 +237,7 @@ const ChainSelect: React.FunctionComponent<ChainSelectProps> = ({
                   borderBottomColor: colors.borderSubtle,
                 }}
               >
-                <ChainLogo chain={chain} size={36} />
+                <ChainLogo chain={shownTicker(chain)} size={36} />
                 <View style={{ flex: 1 }}>
                   <RegText
                     style={{
@@ -233,10 +246,10 @@ const ChainSelect: React.FunctionComponent<ChainSelectProps> = ({
                       fontWeight: selected ? '600' : '500',
                     }}
                   >
-                    {chainDisplayName(chain)}
+                    {shownName(chain)}
                   </RegText>
                   <FadeText style={{ fontSize: 12 }}>
-                    {(chain || '').toUpperCase()}
+                    {shownTicker(chain)}
                   </FadeText>
                 </View>
                 {selected && <CheckIcon size={16} color={colors.fgAccent} />}

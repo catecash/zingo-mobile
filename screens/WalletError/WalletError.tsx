@@ -227,13 +227,7 @@ const WalletError: React.FunctionComponent<WalletErrorProps> = ({
   const host =
     server.kind === 'remote' ? server.uri.replace(/^https?:\/\//, '') : '';
   const netName = (chain: ChainNameEnum) =>
-    translate(
-      chain === ChainNameEnum.testChainName
-        ? 'settings.value-chainname-test'
-        : chain === ChainNameEnum.regtestChainName
-          ? 'settings.value-chainname-regtest'
-          : 'settings.value-chainname-main',
-    ) as string;
+    translate(`settings.value-chainname-${chain}`) as string;
   // On the chain kind the retry cannot succeed, so the primary action is a
   // server on the wallet's network.
   const chain = kind === 'chain' && walletChain ? walletChain : null;

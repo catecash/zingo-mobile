@@ -12,6 +12,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   Keyboard,
+  Linking,
   StyleSheet,
   Pressable as RNPressable,
   ScrollView,
@@ -38,6 +39,7 @@ import { ContextAppLoaded } from '@app/context';
 import Header from '@ui/widgets/Header';
 import {
   LanguageEnum,
+  ChainNameEnum,
   GlobalConst,
   Route,
   BlockExplorerEnum,
@@ -97,6 +99,7 @@ const Settings: React.FunctionComponent<SettingsProps> = ({ navigation }) => {
     biometrics: biometricsContext,
     mixnetView,
     blockExplorer: blockExplorerContext,
+    walletChainName,
     readOnly,
     setPrivacyOption,
     setBackgroundError,
@@ -104,6 +107,10 @@ const Settings: React.FunctionComponent<SettingsProps> = ({ navigation }) => {
     lastError,
     setLastError,
   } = context;
+  const catecash =
+    walletChainName === ChainNameEnum.catecashDevnetChainName ||
+    walletChainName === ChainNameEnum.catecashTestnetChainName ||
+    walletChainName === ChainNameEnum.catecashMainnetChainName;
 
   const languagesArray = translate('settings.languages');
   let LANGUAGES: Options[] = [];
@@ -650,8 +657,19 @@ const Settings: React.FunctionComponent<SettingsProps> = ({ navigation }) => {
 
               <Pressable
                 kind="row"
+                testID="settings.blockexplorer"
                 disabled={disabled}
-                onPress={() => blockExplorerSelectRef.current?.present()}
+                onPress={() =>
+                  catecash
+                    ? Linking.openURL(
+                        walletChainName === ChainNameEnum.catecashMainnetChainName
+                          ? 'https://scan.catecash.com/#/about'
+                          : walletChainName === ChainNameEnum.catecashTestnetChainName
+                            ? 'https://scan-testnet.catecash.com/#/about'
+                            : 'https://scan-devnet.catecash.com/#/about',
+                      )
+                    : blockExplorerSelectRef.current?.present()
+                }
                 style={rowStyle(mixnetView.kind !== 'transport')}
               >
                 <Text variant="bodyStrong">
@@ -665,7 +683,9 @@ const Settings: React.FunctionComponent<SettingsProps> = ({ navigation }) => {
                   >
                     {
                       translate(
-                        `settings.value-blockexplorer-${blockExplorer}`,
+                        catecash
+                          ? 'settings.value-blockexplorer-catescan'
+                          : `settings.value-blockexplorer-${blockExplorer}`,
                       ) as string
                     }
                   </Text>

@@ -11,7 +11,6 @@ import { AddressBookFileClass, ChainNameEnum } from '@app/AppState';
 import { ContextAppLoaded } from '@app/context';
 import { openScanner } from '@app/navigation/navigate';
 import { useResult } from '@app/navigation/results';
-import { isZnsAlias, resolveZnsName } from '@app/uris/resolveZnsName';
 import Utils from '@app/utils';
 import { isWalletAddress } from '@app/walletBackend';
 import {
@@ -34,9 +33,9 @@ import { singleLineInput } from '@ui/primitives/singleLineInput';
 import { SheetFooter } from '@ui/primitives/AppSheetModal';
 
 const ZEC = 'ZEC';
+const CATE_ASSET = { name: 'Catecash', ticker: 'CATE' };
 const NAME_MAX = 32;
 const CHECK_AT = 250;
-const ZNS_AT = 500;
 
 type Field = 'none' | 'name' | 'address';
 
@@ -51,12 +50,6 @@ export type ContactEdit =
       chain?: string;
     }
   | { kind: 'edit'; contact: AddressBookFileClass };
-
-type Zns =
-  | { kind: 'none' }
-  | { kind: 'resolving' }
-  | { kind: 'missing' }
-  | { kind: 'resolved'; alias: string; address: string };
 
 type Check =
   | { kind: 'empty' }
@@ -116,7 +109,6 @@ const ContactSheet: React.FunctionComponent<ContactSheetProps> = ({
     edit.kind === 'edit' ? edit.contact.address : edit.preset,
   );
   const [check, setCheck] = useState<Check>({ kind: 'empty' });
-  const [zns, setZns] = useState<Zns>({ kind: 'none' });
   const [saving, setSaving] = useState(false);
   const [focus, setFocus] = useState<Field>('none');
   const [touched, setTouched] = useState(false);
@@ -162,40 +154,13 @@ const ContactSheet: React.FunctionComponent<ContactSheetProps> = ({
       ? picked
       : likely;
   const zcash = chain === ZEC;
-
-  const alias = zcash && isZnsAlias(address);
+  const catecash =
+    walletChain === ChainNameEnum.catecashDevnetChainName ||
+    walletChain === ChainNameEnum.catecashTestnetChainName ||
+    walletChain === ChainNameEnum.catecashMainnetChainName;
 
   useEffect(() => {
     const typed = address.trim();
-    if (alias) {
-      setCheck({ kind: 'checking' });
-      setZns({ kind: 'resolving' });
-      let cancelled = false;
-      const timer = setTimeout(async () => {
-        const found = await resolveZnsName(typed, walletChain);
-        if (cancelled) {
-          return;
-        }
-        if (found.ok) {
-          const lower = typed.toLowerCase();
-          setZns({ kind: 'resolved', alias: lower, address: found.address });
-          setName(previous => (previous.trim() ? previous : lower));
-          setAddress(found.address);
-          return;
-        }
-        setZns({ kind: 'missing' });
-        setCheck({ kind: 'invalid' });
-      }, ZNS_AT);
-      return () => {
-        cancelled = true;
-        clearTimeout(timer);
-      };
-    }
-    setZns(previous =>
-      previous.kind === 'resolved' && previous.address === typed
-        ? previous
-        : { kind: 'none' },
-    );
     if (typed.length === 0) {
       setCheck({ kind: 'empty' });
       return;
@@ -223,7 +188,7 @@ const ContactSheet: React.FunctionComponent<ContactSheetProps> = ({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [address, alias, walletChain, plain, zcash, chain]);
+  }, [address, walletChain, plain, zcash, chain]);
 
   const trimmedName = name.trim();
   const trimmedAddress = canonicalChainAddress(chain, plain);
@@ -254,24 +219,21 @@ const ContactSheet: React.FunctionComponent<ContactSheetProps> = ({
         trimmedName,
       )
     : '';
-  const addressError =
-    zns.kind === 'missing'
-      ? (translate('send.znsnamenotfound') as string)
-      : sameAddress
-        ? (translate('addressbook.dup-address') as string).replace(
-            '{name}',
-            sameAddress.label,
-          )
-        : check.kind === 'own'
-          ? (translate('addressbook.own-address') as string)
-          : check.kind === 'invalid' && touched
-            ? zcash
-              ? (translate('send.invalidaddress') as string)
-              : (translate('addressbook.not-chain-address') as string).replace(
-                  '{chain}',
-                  chainDisplayName(chain) || chain,
-                )
-            : '';
+  const addressError = sameAddress
+    ? (translate('addressbook.dup-address') as string).replace(
+        '{name}',
+        sameAddress.label,
+      )
+    : check.kind === 'own'
+      ? (translate('addressbook.own-address') as string)
+      : check.kind === 'invalid' && touched
+        ? zcash
+          ? (translate('send.invalidaddress') as string)
+          : (translate('addressbook.not-chain-address') as string).replace(
+              '{chain}',
+              chainDisplayName(chain) || chain,
+            )
+        : '';
   const transparent = zcash && /^t/i.test(trimmedAddress);
   const note: Note = nameError
     ? { tone: 'err', text: nameError }
@@ -395,6 +357,7 @@ const ContactSheet: React.FunctionComponent<ContactSheetProps> = ({
           options={compatible}
           onChange={setPicked}
           translate={translate}
+          nativeAsset={catecash ? CATE_ASSET : undefined}
           disabled={!!fixedChain}
         />
       </View>
@@ -427,7 +390,11 @@ const ContactSheet: React.FunctionComponent<ContactSheetProps> = ({
             multiline
             placeholder={
               zcash
-                ? (translate('addressbook.address-placeholder') as string)
+                ? (translate(
+                    catecash
+                      ? 'addressbook.address-placeholder-catecash'
+                      : 'addressbook.address-placeholder',
+                  ) as string)
                 : (translate('addressbook.chain-address') as string).replace(
                     '{chain}',
                     chainDisplayName(chain) || chain,
@@ -497,14 +464,6 @@ const ContactSheet: React.FunctionComponent<ContactSheetProps> = ({
             )}
           </View>
         </View>
-        {zns.kind === 'resolved' && (
-          <RegText
-            testID="addressbook.address.zns"
-            style={{ color: colors.fgAccent, fontWeight: '600', marginTop: 5 }}
-          >
-            {`ZNS: ${zns.alias}`}
-          </RegText>
-        )}
         <View
           testID={`addressbook.note.${note.tone}`}
           style={{

@@ -1,0 +1,1 @@
+wallet,cryptocurrency,digital cash,shielded,private payments,recovery phrase,QR code

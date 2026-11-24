@@ -10,7 +10,7 @@ import { ContextAppLoaded } from '@app/context';
 import { Request, useResult } from '@app/navigation/results';
 import { openScanner } from '@app/navigation/navigate';
 import { addressFromPaymentUri, validateAddressForChain } from '@app/swap';
-import { GlobalConst } from '@app/AppState';
+import { ChainNameEnum, GlobalConst } from '@app/AppState';
 import { chainDisplayName } from '@ui/widgets/chainDisplayName';
 
 type TextInputAddressProps = {
@@ -52,7 +52,11 @@ const TextInputAddress: React.FunctionComponent<TextInputAddressProps> = ({
   pickContactLabel,
 }) => {
   const context = useContext(ContextAppLoaded);
-  const { translate, server } = context;
+  const { translate, server, walletChainName } = context;
+  const catecash =
+    walletChainName === ChainNameEnum.catecashDevnetChainName ||
+    walletChainName === ChainNameEnum.catecashTestnetChainName ||
+    walletChainName === ChainNameEnum.catecashMainnetChainName;
   const [validAddress, setValidAddress] = useState<number>(0); // 1 - OK, 0 - Empty, -1 - KO
 
   useEffect(() => {
@@ -106,10 +110,18 @@ const TextInputAddress: React.FunctionComponent<TextInputAddressProps> = ({
       texts: {
         title: translate('scanner.title') as string,
         hint: zcash
-          ? (translate('scanner.hint-address') as string)
+          ? (translate(
+              catecash
+                ? 'scanner.hint-address-catecash'
+                : 'scanner.hint-address',
+            ) as string)
           : named('scanner.hint-chain'),
         miss: zcash
-          ? (translate('scanner.miss-address') as string)
+          ? (translate(
+              catecash
+                ? 'scanner.miss-address-catecash'
+                : 'scanner.miss-address',
+            ) as string)
           : named('scanner.miss-chain'),
         found: translate('scanner.found') as string,
         back: translate('scanner.back') as string,
@@ -126,7 +138,12 @@ const TextInputAddress: React.FunctionComponent<TextInputAddressProps> = ({
       value={address}
       onChangeText={take}
       placeholder={
-        placeholder ?? (translate('send.addressplaceholder') as string)
+        placeholder ??
+        (translate(
+          catecash
+            ? 'send.addressplaceholder-catecash'
+            : 'send.addressplaceholder',
+        ) as string)
       }
       mono
       disabled={disabled}

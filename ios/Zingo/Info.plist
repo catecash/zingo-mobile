@@ -56,13 +56,11 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Zingo needs access to the camera to scan address QRCodes</string>
+	<string>Catecash uses the camera to scan address QR codes.</string>
 	<key>NSFaceIDUsageDescription</key>
-	<string>Allow Zingo to use FaceID to improve the security and privacy?</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Zingo does not use any Location Features</string>
+	<string>Catecash uses Face ID to protect your wallet.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Zingo export/share address QRCodes as images</string>
+	<string>Catecash saves and shares address QR codes as images.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
@@ -89,7 +87,7 @@
 		<string>remote-notification</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
-	<string>LaunchScreen.storyboar</string>
+	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>arm64</string>

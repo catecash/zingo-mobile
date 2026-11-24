@@ -147,6 +147,7 @@ const sendUi = (
   state.sendPageState = sendPageState;
   state.addLastSnackbar = addLastSnackbar;
   state.server = inputs.server;
+  state.walletChainName = inputs.server.chainName;
   state.netInfo = inputs.netInfo;
   state.mixnetView = inputs.mixnetView;
   state.sendPermitNow = () => sendPermit(appState);
@@ -199,6 +200,35 @@ afterEach(() => {
 const sent = { kind: 'sent', receipt: 'txid' };
 
 describe('Send confirm send permit', () => {
+  test('Tests that a scanned Catecash address reaches review without a name suggestion', async () => {
+    const scanned = 'ypkjvw6cqqb1mydycacufhsbgponih5tnbc';
+    const catecash = {
+      ...online,
+      server: remoteServer(
+        'https://wallet-devnet.catecash.com:443',
+        ChainNameEnum.catecashDevnetChainName,
+      ),
+    };
+    const view = render(sendUi(catecash, jest.fn(), jest.fn()));
+    layoutSend();
+
+    await act(async () => deliver('send.address', scanned));
+    await waitFor(() =>
+      expect(Utils.isValidAddress).toHaveBeenCalledWith(
+        scanned,
+        ChainNameEnum.catecashDevnetChainName,
+      ),
+    );
+    expect(view.queryByTestId('send.result.name')).toBeNull();
+    expect(view.queryByTestId('send.results')).toBeNull();
+
+    await openConfirmScreen(view);
+    const confirmCall = navigate.mock.calls.find(
+      ([route]) => route === Route.Confirm,
+    );
+    expect(confirmCall?.[1].sendPageState.toaddr.to).toBe(scanned);
+  });
+
   test('Tests that confirming does not send when the transport dies while the Confirm screen is open. The screen opened on a ready view.', async () => {
     const sendTransaction = jest.fn().mockResolvedValue(sent);
     const addLastSnackbar = jest.fn();

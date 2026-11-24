@@ -24,13 +24,22 @@ const CHAINS: string[] = [
   ChainNameEnum.mainChainName,
   ChainNameEnum.testChainName,
   ChainNameEnum.regtestChainName,
+  ChainNameEnum.catecashDevnetChainName,
+  ChainNameEnum.catecashTestnetChainName,
+  ChainNameEnum.catecashMainnetChainName,
 ];
 const HOST = /^[a-z0-9.-]+$/i;
 export const addressOf = (host: string, port: string) =>
   port ? `${host}:${port}` : host;
 
-export const schemeFor = (chain: ChainNameEnum) =>
-  chain === ChainNameEnum.regtestChainName ? 'http://' : 'https://';
+const LOCAL_HOST =
+  /^(?:localhost$|127\.|10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.|[a-z0-9.-]+\.local$)/i;
+
+export const schemeFor = (chain: ChainNameEnum, host = '') =>
+  chain === ChainNameEnum.regtestChainName ||
+  (chain === ChainNameEnum.catecashDevnetChainName && LOCAL_HOST.test(host))
+    ? 'http://'
+    : 'https://';
 
 // Splits a full address into host and port; a bare host has no port.
 export const splitUrl = (url: string): [string, string] => {
@@ -105,7 +114,7 @@ export const useCustomServer = ({
   // The address in the field, as Zingo stores it; null while it is not one.
   const uriOf = (chain: ChainNameEnum, d: Draft = draft(chain)) => {
     const parsed = parseServerURI(
-      `${schemeFor(chain)}${addressOf(d.host.trim(), d.port.trim())}`,
+      `${schemeFor(chain, d.host.trim())}${addressOf(d.host.trim(), d.port.trim())}`,
     );
     return parsed.kind === 'error' ? null : parsed.uri;
   };
@@ -171,7 +180,7 @@ export const useCustomServer = ({
       return fail(chain, [final('bad', t('host-only'))]);
     }
     const parsed = parseServerURI(
-      `${schemeFor(chain)}${addressOf(host, port)}`,
+      `${schemeFor(chain, host)}${addressOf(host, port)}`,
     );
     if (parsed.kind === 'error') {
       return fail(chain, [final('bad', translate(parsed.errorKey) as string)]);
@@ -228,7 +237,16 @@ export const useCustomServer = ({
       return fail(chain, [
         reached,
         step('bad', t('fail-refused'), probe.cause),
-        final('bad', t('fix-refused')),
+        final(
+          'bad',
+          t(
+            chain === ChainNameEnum.catecashDevnetChainName ||
+            chain === ChainNameEnum.catecashTestnetChainName ||
+            chain === ChainNameEnum.catecashMainnetChainName
+              ? 'fix-refused-catecash'
+              : 'fix-refused',
+          ),
+        ),
       ]);
     }
     const answered = step('ok', t('log-info', { ms: probe.latencyMs }));

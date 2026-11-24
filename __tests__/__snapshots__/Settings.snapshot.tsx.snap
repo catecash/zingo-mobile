@@ -865,6 +865,7 @@ exports[`Component Settings - test Settings - snapshot 1`] = `
                   {},
                 ]
               }
+              testID="settings.blockexplorer"
             >
               <View
                 pointerEvents="none"

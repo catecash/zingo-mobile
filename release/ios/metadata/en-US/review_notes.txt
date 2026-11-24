@@ -1,0 +1,5 @@
+Catecash is a self-custody wallet. No account or login is required. To review wallet creation, tap Create new wallet and follow the recovery phrase backup flow. Open Receive to see a wallet address and QR code. Open Options > Server to see the connected server and network.
+
+The app uses the camera only when the reviewer chooses to scan a payment address. Face ID protects access when the reviewer enables the device lock setting.
+
+For a transaction review, use the funded review wallet and transfer instructions supplied in the App Review contact details. Do not enter a personal recovery phrase.

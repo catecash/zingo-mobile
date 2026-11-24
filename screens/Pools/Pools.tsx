@@ -30,6 +30,7 @@ import {
 import { AppDrawerParamList } from '@app/types';
 import { ContextAppLoaded } from '@app/context';
 import { formatZecAmount } from '@app/utils/formatZecAmount';
+import { formatAtomicAmount } from '@app/utils/formatAmount';
 import { useShieldFunds } from '@app/hooks/useShieldFunds';
 import { useOrchardResidualOnly } from '@app/hooks/useOrchardResidualOnly';
 import Header from '@ui/widgets/Header';
@@ -66,6 +67,8 @@ type Pool = {
   total: number;
   /** Spendable for the shielded pools, confirmed for transparent. */
   ready: number;
+  atomicTotal?: string;
+  atomicReady?: string;
 };
 
 type PoolsProps = NativeStackScreenProps<AppDrawerParamList, 'Pools'>;
@@ -138,6 +141,8 @@ const Pools: React.FunctionComponent<PoolsProps> = ({ navigation }) => {
           key: 'ironwood' as const,
           total: totalBalance.totalIronwoodBalance,
           ready: totalBalance.confirmedIronwoodBalance,
+          atomicTotal: totalBalance.catecashAtomic?.ironwood,
+          atomicReady: totalBalance.catecashAtomic?.confirmedIronwood,
         },
         ...(orchardPool
           ? [
@@ -145,6 +150,8 @@ const Pools: React.FunctionComponent<PoolsProps> = ({ navigation }) => {
                 key: 'orchard' as const,
                 total: totalBalance.totalOrchardBalance,
                 ready: totalBalance.confirmedOrchardBalance,
+                atomicTotal: totalBalance.catecashAtomic?.orchard,
+                atomicReady: totalBalance.catecashAtomic?.confirmedOrchard,
               },
             ]
           : []),
@@ -154,6 +161,8 @@ const Pools: React.FunctionComponent<PoolsProps> = ({ navigation }) => {
                 key: 'sapling' as const,
                 total: totalBalance.totalSaplingBalance,
                 ready: totalBalance.confirmedSaplingBalance,
+                atomicTotal: totalBalance.catecashAtomic?.sapling,
+                atomicReady: totalBalance.catecashAtomic?.confirmedSapling,
               },
             ]
           : []),
@@ -163,6 +172,8 @@ const Pools: React.FunctionComponent<PoolsProps> = ({ navigation }) => {
                 key: 'transparent' as const,
                 total: totalBalance.totalTransparentBalance,
                 ready: totalBalance.confirmedTransparentBalance,
+                atomicTotal: totalBalance.catecashAtomic?.transparent,
+                atomicReady: totalBalance.catecashAtomic?.confirmedTransparent,
               },
             ]
           : []),
@@ -285,7 +296,9 @@ const Pools: React.FunctionComponent<PoolsProps> = ({ navigation }) => {
                   testID="pools.total"
                   onPress={onAmount}
                 >
-                  {zec(total)}{' '}
+                  {totalBalance?.catecashAtomic
+                    ? formatAtomicAmount(totalBalance.catecashAtomic.total)
+                    : zec(total)}{' '}
                   <Text variant="bodyStrong" tone="muted">
                     {info.currencyName}
                   </Text>
@@ -393,7 +406,9 @@ const Pools: React.FunctionComponent<PoolsProps> = ({ navigation }) => {
                               onPress={onAmount}
                               style={{ color: readyColor, fontWeight: '600' }}
                             >
-                              {zec(pool.ready)}
+                              {pool.atomicReady
+                                ? formatAtomicAmount(pool.atomicReady)
+                                : zec(pool.ready)}
                             </Text>
                           </Text>
                         }
@@ -408,7 +423,9 @@ const Pools: React.FunctionComponent<PoolsProps> = ({ navigation }) => {
                                 : undefined
                             }
                           >
-                            {zec(pool.total)}{' '}
+                            {pool.atomicTotal
+                              ? formatAtomicAmount(pool.atomicTotal)
+                              : zec(pool.total)}{' '}
                             <Text variant="bodyStrong" tone="muted">
                               {info.currencyName}
                             </Text>

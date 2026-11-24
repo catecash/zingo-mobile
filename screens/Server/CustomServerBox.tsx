@@ -149,7 +149,7 @@ const CustomServerBox: React.FC<CustomServerBoxProps> = ({
           inputRef={hostInput}
           testID="server.custom.host"
           accessibilityLabel={labels.host}
-          prefix={schemeFor(chain)}
+          prefix={schemeFor(chain, host.trim())}
           value={host}
           onChangeText={text => {
             if (onHost(text)) {
@@ -162,7 +162,8 @@ const CustomServerBox: React.FC<CustomServerBoxProps> = ({
           disabled={disabled}
           readOnly={busy}
           placeholder={
-            chain === ChainNameEnum.regtestChainName
+            chain === ChainNameEnum.regtestChainName ||
+            chain === ChainNameEnum.catecashDevnetChainName
               ? labels.hostRegtest
               : labels.host
           }

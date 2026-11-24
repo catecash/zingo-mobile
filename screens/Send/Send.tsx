@@ -44,15 +44,12 @@ import {
   SendPageStateClass,
   ToAddrClass,
   GlobalConst,
+  ChainNameEnum,
   SelectServerEnum,
   Route,
   ProposalPoolsType,
 } from '@app/AppState';
 import { hasUnconfirmedFunds } from '@app/wallet/classes';
-// Imported straight from the module rather than through the `uris` barrel, so
-// the ZNS SDK stays out of the module graph of everything else that barrel
-// serves (the wallet backend among them).
-import { isZnsAlias, resolveZnsName } from '@app/uris/resolveZnsName';
 import {
   getSpendableBalanceWithAddress,
   sendAllPreview,
@@ -89,7 +86,6 @@ import { useOptionsPanelSheetSlide } from '@app/hooks/useOptionsPanelSheetSlide'
 import { RPCSendProposeType } from '@app/walletBackend/types/RPCSendProposeType';
 import ShowAddressAlertAsync from '@app/services/showAddressAlertAsync';
 import RecipientField from './components/RecipientField';
-import type { NameLookup } from './components/RecipientField';
 import AmountCard from './components/AmountCard';
 import Text from '@ui/primitives/Text';
 import { PlusIcon } from '@ui/primitives/Icons/PlusIcon';
@@ -105,14 +101,6 @@ import { useScrollEdges } from '@ui/widgets/ScrollEdges';
 import { dismissOnDrag } from '@ui/primitives/keyboardDismiss';
 
 type SendProps = HomeTabScreenProps<'Send'>;
-
-/** How long a typed name sits still before it is looked up. */
-const NAME_LOOKUP_MS = 700;
-/** Text that starts like a Zcash address or URI, never a name. */
-const ADDRESS_LIKE =
-  /^(u1|utest1|uregtest1|zs1|ztestsapling|zregtestsapling|t1|t3|tm|tex|zcash:)/i;
-/** A name the protocol allows, typed without its suffix. */
-const BARE_NAME = /^[a-z0-9]{1,62}$/;
 
 const Send: React.FunctionComponent<SendProps> = () => {
   const { edges, fades } = useScrollEdges({
@@ -135,6 +123,7 @@ const Send: React.FunctionComponent<SendProps> = () => {
     zecPrice,
     netInfo,
     server,
+    walletChainName,
     setBackgroundError,
     addLastSnackbar,
     somePending,
@@ -149,22 +138,15 @@ const Send: React.FunctionComponent<SendProps> = () => {
     sendPermitNow,
   } = context;
   const { colors } = useTheme();
+  const catecash =
+    walletChainName === ChainNameEnum.catecashDevnetChainName ||
+    walletChainName === ChainNameEnum.catecashTestnetChainName ||
+    walletChainName === ChainNameEnum.catecashMainnetChainName;
   const showFiat = fiatEligible(server, server.chainName);
   const quote = fiatQuote(zecPrice, server, server.chainName);
 
   const [memoEnabled, setMemoEnabled] = useState<boolean>(false);
   const [validAddress, setValidAddress] = useState<number>(0); // 1 - OK, 0 - Empty, -1 - KO
-  // A ZNS alias the indexer does not know. Reported in place of the
-  // invalid-address text, which would be wrong: the address is not malformed,
-  // the name simply is not registered.
-  const [nameLookup, setNameLookup] = useState<NameLookup>({ kind: 'none' });
-  // The alias a resolution came from, kept beside the address it produced.
-  // Resolving replaces the alias in the field with a unified address, and
-  // without this the origin of that address would be lost — the user typed
-  // "pepe.zcash" and would be looking at a string of base32.
-  const [zns, setZns] = useState<{ alias: string; address: string } | null>(
-    null,
-  );
   const [validAmount, setValidAmount] = useState<number>(0); // 1 - OK, 0 - Empty, -1 - Invalid number, -2 - Invalid Amount
   /** The field that has focus, for its blue edge. */
   const [focusedField, setFocusedField] = useState<
@@ -203,17 +185,6 @@ const Send: React.FunctionComponent<SendProps> = () => {
   );
   /** The memo field opens on "Add a memo", or by itself once it has text. */
   const [memoOpen, setMemoOpen] = useState<boolean>(false);
-  /** A name typed in To, as the Zcash Name it would be: "maria" reads "maria.zec". */
-  const nameQuery = (() => {
-    const typed = addressText.trim().toLowerCase();
-    if (!typed || ADDRESS_LIKE.test(typed)) {
-      return '';
-    }
-    if (isZnsAlias(typed)) {
-      return typed;
-    }
-    return BARE_NAME.test(typed) ? `${typed}.zec` : '';
-  })();
   const [containerH, setContainerH] = useState<number>(0);
 
   const scrollViewRef = useRef<KeyboardAwareScrollViewRef>(null);
@@ -585,40 +556,6 @@ const Send: React.FunctionComponent<SendProps> = () => {
     }
   }, [calculateSpendableBalance, addressText]);
 
-  // Zcash Name Service: a name in the recipient field ("maria" or
-  // "maria.zec") is looked up after a pause and shown in the results box
-  // under the field; it goes into the field only when the user picks it, so
-  // nothing replaces what they are still typing.
-  useEffect(() => {
-    if (!nameQuery) {
-      setNameLookup({ kind: 'none' });
-      setZns(previous =>
-        previous && previous.address !== addressText ? null : previous,
-      );
-      return;
-    }
-    setValidAddress(0);
-    setNameLookup({ kind: 'loading', name: nameQuery });
-    let cancelled = false;
-    const timerId = setTimeout(async () => {
-      const resolution = await resolveZnsName(nameQuery, server.chainName);
-      if (cancelled) {
-        return;
-      }
-      setNameLookup(
-        resolution.ok
-          ? { kind: 'found', name: nameQuery, address: resolution.address }
-          : { kind: 'missing', name: nameQuery },
-      );
-    }, NAME_LOOKUP_MS);
-    return () => {
-      cancelled = true;
-      clearTimeout(timerId);
-    };
-    // addressText only matters through nameQuery, which it derives.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nameQuery, server.chainName]);
-
   useEffect(() => {
     const getMemoEnabled = async (
       address: string,
@@ -653,18 +590,15 @@ const Send: React.FunctionComponent<SendProps> = () => {
   useEffect(() => {
     let cancelled = false;
     if (addressText) {
-      // A name is not an address: the lookup above owns what it shows.
-      if (!nameQuery) {
-        Utils.isValidAddress(addressText, server.chainName).then(r => {
-          if (cancelled) {
-            return;
-          }
-          setValidAddress(r.isValid ? 1 : -1);
-          if (!r.isValid) {
-            setSpendableBalanceLastError('');
-          }
-        });
-      }
+      Utils.isValidAddress(addressText, server.chainName).then(r => {
+        if (cancelled) {
+          return;
+        }
+        setValidAddress(r.isValid ? 1 : -1);
+        if (!r.isValid) {
+          setSpendableBalanceLastError('');
+        }
+      });
     } else {
       setValidAddress(0);
     }
@@ -717,7 +651,6 @@ const Send: React.FunctionComponent<SendProps> = () => {
     decimalSeparator,
     server.chainName,
     addressText,
-    nameQuery,
     amountCurrencyText,
     amountText,
     memoText,
@@ -817,7 +750,7 @@ const Send: React.FunctionComponent<SendProps> = () => {
         amountCurrency: amountCurrencyText,
         memo: memoText,
         includeUAMemo: includeUAMemoBoolean,
-        znsAlias: zns?.address === addressText ? zns.alias : '',
+        znsAlias: '',
       },
     } as SendPageStateClass;
   };
@@ -920,8 +853,12 @@ const Send: React.FunctionComponent<SendProps> = () => {
         accepts: { kind: 'zcash', chain: server.chainName },
         texts: {
           title: translate('scanner.title') as string,
-          hint: translate('scanner.hint-address') as string,
-          miss: translate('scanner.miss-address') as string,
+          hint: translate(
+            catecash ? 'scanner.hint-address-catecash' : 'scanner.hint-address',
+          ) as string,
+          miss: translate(
+            catecash ? 'scanner.miss-address-catecash' : 'scanner.miss-address',
+          ) as string,
           found: translate('scanner.found') as string,
           back: translate('scanner.back') as string,
           torch: translate('scanner.torch') as string,
@@ -970,10 +907,10 @@ const Send: React.FunctionComponent<SendProps> = () => {
   /** Contacts whose name starts with what is typed, while it is not an address. */
   const contactMatches = (() => {
     const typed = addressText.trim().toLowerCase();
-    if (!typed || validAddress === 1 || ADDRESS_LIKE.test(typed)) {
+    if (!typed || validAddress === 1) {
       return [];
     }
-    const query = typed.replace(/\.(zec|zcash)$/, '');
+    const query = typed;
     return addressBook
       .filter(
         entry =>
@@ -1071,29 +1008,15 @@ const Send: React.FunctionComponent<SendProps> = () => {
                   onFocus={() => setFocusedField('address')}
                   onBlur={() => setFocusedField('none')}
                   contact={recipientContact}
-                  pickedName={
-                    !recipientContact && zns?.address === addressText
-                      ? zns.alias
-                      : ''
-                  }
                   matches={contactMatches}
-                  lookup={nameLookup}
                   onPickContact={entry =>
                     updateToField(entry.address, null, null, null, null)
                   }
-                  onPickName={(name, address) => {
-                    setZns({ alias: name, address });
-                    updateToField(address, null, null, null, null);
-                  }}
                   onOpenBook={openBook}
                   onScan={setQrcodeModalShow}
                   scanRef={scanButton}
                   onSaveContact={() =>
-                    launchAddTagModal(
-                      addressText,
-                      undefined,
-                      zns?.address === addressText ? zns.alias : undefined,
-                    )
+                    launchAddTagModal(addressText, undefined, undefined)
                   }
                   busy={updatingToField}
                 />

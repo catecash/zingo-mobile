@@ -36,6 +36,7 @@ import {
 import Text from '@ui/primitives/Text';
 import { ServerStatus } from '@app/AppState/types/ServerStatus';
 import { formatInteger } from '@app/utils/formatAmount';
+import { isCatecashApp } from '@app/utils/ZingoAppData';
 import ServerRow, {
   Placement,
   useLift,
@@ -80,6 +81,7 @@ export type ServerProps = {
   onOther: (chain: ChainNameEnum) => void;
   onProbe: (chain: ChainNameEnum) => void;
   onUnreachable: () => void;
+  onSwitchNetwork?: (chain: ChainNameEnum) => void;
   onBack: () => void;
   // Set to a guard the host calls on a system back; true when the screen
   // handled it (an unsaved custom server asks first).
@@ -98,7 +100,13 @@ const CHAINS: ChainNameEnum[] = [
   ChainNameEnum.mainChainName,
   ChainNameEnum.testChainName,
   ChainNameEnum.regtestChainName,
+  ChainNameEnum.catecashDevnetChainName,
+  ChainNameEnum.catecashTestnetChainName,
+  ChainNameEnum.catecashMainnetChainName,
 ];
+const customOnlyChain = (chain: ChainNameEnum) =>
+  chain === ChainNameEnum.regtestChainName ||
+  chain === ChainNameEnum.catecashDevnetChainName;
 const LEAVE_AFTER_SAVE_MS = 1500;
 
 const fadeIn = () =>
@@ -227,6 +235,7 @@ const Server: React.FunctionComponent<ServerProps> = ({
   onOther,
   onProbe,
   onUnreachable,
+  onSwitchNetwork,
   onBack,
   backGuard,
   onGuard,
@@ -237,10 +246,17 @@ const Server: React.FunctionComponent<ServerProps> = ({
   const { edges, fades } = useScrollEdges();
   const t = (key: string, values: Record<string, string> = {}) =>
     fill(translate(`server.${key}`) as string, values);
+  const catecashApp = isCatecashApp();
   const offline = server.kind === 'offline';
+  const fixedChain = initialChain || server.chainName;
   const [tab, setTab] = useState<ChainNameEnum>(
-    initialChain ??
-      (CHAINS.includes(server.chainName) ? server.chainName : CHAINS[0]),
+    catecashApp
+      ? fixedChain === ChainNameEnum.catecashTestnetChainName ||
+        fixedChain === ChainNameEnum.catecashDevnetChainName
+        ? fixedChain
+        : ChainNameEnum.catecashMainnetChainName
+      : (initialChain ??
+          (CHAINS.includes(server.chainName) ? server.chainName : CHAINS[0])),
   );
   // The network whose Custom row is open without being the saved choice.
   const [customOpen, setCustomOpen] = useState<ChainNameEnum | null>(null);
@@ -248,13 +264,7 @@ const Server: React.FunctionComponent<ServerProps> = ({
   const [shakes, setShakes] = useState<Record<string, number>>({});
 
   const netName = (chain: ChainNameEnum) =>
-    translate(
-      chain === ChainNameEnum.testChainName
-        ? 'settings.value-chainname-test'
-        : chain === ChainNameEnum.regtestChainName
-          ? 'settings.value-chainname-regtest'
-          : 'settings.value-chainname-main',
-    ) as string;
+    translate(`settings.value-chainname-${chain}`) as string;
 
   const custom = useCustomServer({
     translate,
@@ -275,9 +285,10 @@ const Server: React.FunctionComponent<ServerProps> = ({
   }, [tab, onProbe]);
 
   const regtest = tab === ChainNameEnum.regtestChainName;
+  const customOnly = customOnlyChain(tab);
   const onTab = !offline && server.chainName === tab;
   const customSelected =
-    regtest ||
+    customOnly ||
     customOpen === tab ||
     (onTab && customOpen === null && selectServer === SelectServerEnum.custom);
   const isAuto =
@@ -374,15 +385,28 @@ const Server: React.FunctionComponent<ServerProps> = ({
   }
 
   const changeTab = (chain: ChainNameEnum) => {
-    if (working || chain === tab) {
+    if (networkLocked && catecashApp && onSwitchNetwork) {
+      if (chain !== fixedChain) {
+        onSwitchNetwork(chain);
+      }
+      return;
+    }
+    if (
+      working ||
+      chain === tab ||
+      networkLocked ||
+      (catecashApp &&
+        chain !== ChainNameEnum.catecashDevnetChainName &&
+        chain !== ChainNameEnum.catecashTestnetChainName &&
+        chain !== ChainNameEnum.catecashMainnetChainName)
+    ) {
       return;
     }
     setCustomOpen(null);
     setTab(chain);
     if (
-      !offline &&
-      chain !== ChainNameEnum.regtestChainName &&
-      chain !== server.chainName
+      chain !== server.chainName &&
+      (catecashApp || (!offline && !customOnlyChain(chain)))
     ) {
       onAuto(chain);
     }
@@ -391,7 +415,7 @@ const Server: React.FunctionComponent<ServerProps> = ({
   const switchTo = (chain: ChainNameEnum) => {
     custom.seed(chain, draft.host, draft.port);
     setCustomOpen(
-      chain === ChainNameEnum.regtestChainName ||
+      customOnlyChain(chain) ||
         (server.chainName === chain && selectServer === SelectServerEnum.custom)
         ? null
         : chain,
@@ -433,7 +457,7 @@ const Server: React.FunctionComponent<ServerProps> = ({
       result={result}
       saved={saved}
       working={custom.working}
-      disabled={busy || offline}
+      disabled={busy || (offline && !customOnly)}
       shake={custom.shake}
       pulse={custom.pulse}
       autoFocus={customOpen === tab}
@@ -458,7 +482,7 @@ const Server: React.FunctionComponent<ServerProps> = ({
     />
   );
 
-  const body = regtest ? (
+  const body = customOnly ? (
     <>
       <Text
         variant="bodySmall"
@@ -470,7 +494,7 @@ const Server: React.FunctionComponent<ServerProps> = ({
           fontWeight: '600',
         }}
       >
-        {t('regtest-label')}
+        {t(regtest ? 'regtest-label' : 'catecash-label')}
       </Text>
       <View style={{ marginHorizontal: CARD_SIDE }}>{customBlock}</View>
     </>
@@ -592,14 +616,47 @@ const Server: React.FunctionComponent<ServerProps> = ({
 
       <SegmentedSwitch
         testID="server.segments"
-        options={CHAINS.map(chain => ({
-          key: chain,
-          label: netName(chain),
-          testID: `server.net.${chain}`,
-        }))}
+        options={
+          catecashApp
+            ? [
+                {
+                  key: ChainNameEnum.catecashMainnetChainName,
+                  label: netName(ChainNameEnum.catecashMainnetChainName),
+                  testID: 'server.net.catecash-mainnet',
+                  disabled: networkLocked && !onSwitchNetwork,
+                },
+                {
+                  key: ChainNameEnum.catecashTestnetChainName,
+                  label: netName(ChainNameEnum.catecashTestnetChainName),
+                  testID: 'server.net.catecash-testnet',
+                  disabled: networkLocked && !onSwitchNetwork,
+                },
+                {
+                  key: ChainNameEnum.catecashDevnetChainName,
+                  label: netName(ChainNameEnum.catecashDevnetChainName),
+                  testID: `server.net.${ChainNameEnum.catecashDevnetChainName}`,
+                  disabled: networkLocked && !onSwitchNetwork,
+                },
+              ]
+            : CHAINS.map(chain => ({
+                key: chain,
+                label:
+                  chain === ChainNameEnum.catecashDevnetChainName ||
+                  chain === ChainNameEnum.catecashTestnetChainName ||
+                  chain === ChainNameEnum.catecashMainnetChainName
+                    ? 'CATE'
+                    : netName(chain),
+                testID: `server.net.${chain}`,
+              }))
+        }
         value={tab}
         onChange={changeTab}
-        disabled={locked || networkLocked}
+        disabled={
+          busy ||
+          working ||
+          (offline && !catecashApp) ||
+          (networkLocked && !onSwitchNetwork)
+        }
         style={[
           {
             position: 'absolute',
@@ -639,7 +696,7 @@ const Server: React.FunctionComponent<ServerProps> = ({
         >
           <Animated.View
             style={[lockStyle, bodyFade]}
-            pointerEvents={offline ? 'none' : 'auto'}
+            pointerEvents={offline && !customOnly ? 'none' : 'auto'}
           >
             {!!networkNote && (
               <Text
@@ -682,7 +739,7 @@ const Server: React.FunctionComponent<ServerProps> = ({
             <Switch
               testID="server.offline"
               value={offline}
-              disabled={busy || working}
+              disabled={busy || working || (offline && customOnly)}
               accessibilityLabel={t('offline')}
               onValueChange={() => {
                 setCustomOpen(null);

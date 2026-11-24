@@ -99,7 +99,11 @@ import { ContextAppLoadingProvider } from '@app/context';
 import BackgroundFileImpl from '@app/services/BackgroundFileImpl';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createAlert } from '@app/services/createAlert';
-import { getZingoVersion, substituteZingoName } from '@app/utils/ZingoAppData';
+import {
+  getZingoVersion,
+  isCatecashApp,
+  substituteZingoName,
+} from '@app/utils/ZingoAppData';
 import Utils from '@app/utils';
 import Toast from 'react-native-toast-message';
 import { toastConfig } from '@ui/widgets/toastConfig';
@@ -154,10 +158,17 @@ type LoadingAppProps = NativeStackScreenProps<RootParamList, 'Loading'> & {
   session: LoadingSession;
 };
 
-const SERVER_DEFAULT_0: ServerType = remoteServer(
-  serverUris(() => {})[0].uri,
-  serverUris(() => {})[0].chainName,
-);
+const SERVER_DEFAULT_0: ServerType = isCatecashApp()
+  ? remoteServer(
+      serverUris(() => {}).find(
+        s => s.chainName === ChainNameEnum.catecashMainnetChainName && s.default,
+      )!.uri,
+      ChainNameEnum.catecashMainnetChainName,
+    )
+  : remoteServer(
+      serverUris(() => {})[0].uri,
+      serverUris(() => {})[0].chainName,
+    );
 
 export default function LoadingApp(props: LoadingAppProps) {
   const theme = useTheme();
@@ -176,7 +187,7 @@ export default function LoadingApp(props: LoadingAppProps) {
   const [loading, setLoading] = useState<boolean>(true);
   const [biometrics, setBiometrics] = useState<boolean>(true);
   const [selectServer, setSelectServer] = useState<SelectServerEnum>(
-    SelectServerEnum.auto,
+    isCatecashApp() ? SelectServerEnum.custom : SelectServerEnum.auto,
   );
   const [blockExplorer, setBlockExplorer] = useState<BlockExplorerEnum>(
     BlockExplorerEnum.Zcashexplorer,
@@ -251,7 +262,16 @@ export default function LoadingApp(props: LoadingAppProps) {
         i18n.locale = lang;
         await SettingsFileImpl.writeSettings(SettingsNameEnum.language, lang);
       }
-      if (settings.server) {
+      if (
+        isCatecashApp() &&
+        settings.server?.chainName !== ChainNameEnum.catecashDevnetChainName &&
+        settings.server?.chainName !== ChainNameEnum.catecashTestnetChainName &&
+        settings.server?.chainName !== ChainNameEnum.catecashMainnetChainName
+      ) {
+        const initial = SERVER_DEFAULT_0;
+        setServer(initial);
+        setSelectServer(SelectServerEnum.auto);
+      } else if (settings.server) {
         // Offline carries a chain for create and restore to derive keys on.
         // A config saved before offline had one falls back to mainnet.
         const chainless =
@@ -553,7 +573,9 @@ export class LoadingAppClass extends Component<
     // Second, open the wallet when there is one.
     await AsyncStorage.setItem(GlobalConst.background, GlobalConst.no);
 
-    if (exists) {
+    if (isCatecashApp()) {
+      await this.loadCatecashWalletOnBoot();
+    } else if (exists) {
       this.setState({ walletExists: true });
       await this.loadExistingWalletOnBoot();
     } else {
@@ -894,6 +916,69 @@ export class LoadingAppClass extends Component<
     }
     await this.walletLoadFailed(
       Utils.humanizeChainTokens(opened.error.message, this.state.translate),
+    );
+  };
+
+  loadCatecashWalletOnBoot = async () => {
+    const listed = await walletsOnDevice();
+    if (!listed.ok) {
+      await this.walletLoadFailed(listed.error.message);
+      return;
+    }
+    const catecashWallets = listed.value.wallets.filter(
+      entry =>
+        entry.meta.chain === ChainNameEnum.catecashDevnetChainName ||
+        entry.meta.chain === ChainNameEnum.catecashTestnetChainName ||
+        entry.meta.chain === ChainNameEnum.catecashMainnetChainName,
+    );
+    const active = listed.value.active;
+    const wallet =
+      catecashWallets.find(
+        entry => active.kind === 'wallet' && entry.id === active.id,
+      ) ?? catecashWallets[0];
+    if (!wallet) {
+      this.setState({ walletExists: false, actionButtonsDisabled: false });
+      this.props.openOnboarding(Route.Welcome);
+      return;
+    }
+    const choice = await SettingsFileImpl.serverOf(wallet.meta);
+    const opened = await finishWalletOpen(
+      await loadWallet(
+        wallet.id,
+        nativeUri(choice.server),
+        choice.server.chainName,
+        DEFAULT_PERFORMANCE_LEVEL,
+        GlobalConst.minConfirmations.toString(),
+      ),
+      choice.server.chainName,
+    );
+    if (opened.kind === 'failed') {
+      await this.walletLoadFailed(opened.error.message);
+      return;
+    }
+    await new Promise<void>(resolve =>
+      this.setState(
+        {
+          server: choice.server,
+          selectServer: choice.selectServer,
+          walletExists: true,
+          readOnly: opened.readOnly,
+          orchardPool: opened.orchardPool,
+          saplingPool: opened.saplingPool,
+          transparentPool: opened.transparentPool,
+          actionButtonsDisabled: false,
+        },
+        resolve,
+      ),
+    );
+    this.navigateToLoadedApp(
+      opened.readOnly,
+      opened.orchardPool,
+      opened.saplingPool,
+      opened.transparentPool,
+      false,
+      this.state.firstLaunchingMessage,
+      opened.walletChainName,
     );
   };
 
@@ -1534,6 +1619,12 @@ export class LoadingAppClass extends Component<
   // Loads a chain's Other servers once, then times them and the recommended
   // servers from this device.
   probeServers = async (chain: ChainNameEnum) => {
+    if (
+      chain === ChainNameEnum.catecashDevnetChainName ||
+      chain === ChainNameEnum.catecashTestnetChainName ||
+      chain === ChainNameEnum.catecashMainnetChainName
+    )
+      return;
     if (!this.state.serverLists[chain]) {
       const list = await otherServersFor(
         this.state.translate,
