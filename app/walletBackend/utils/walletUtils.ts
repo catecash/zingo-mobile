@@ -391,6 +391,9 @@ const KEY_CHAINS: readonly string[] = [
   ChainNameEnum.mainChainName,
   ChainNameEnum.testChainName,
   ChainNameEnum.regtestChainName,
+  ChainNameEnum.catecashDevnetChainName,
+  ChainNameEnum.catecashTestnetChainName,
+  ChainNameEnum.catecashMainnetChainName,
 ];
 
 // The chain the wallet file on this device was written for.

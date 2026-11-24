@@ -20,6 +20,8 @@ jest.mock('@app/uris', () => ({
   serverUris: () => [
     { uri: 'https://mainnet.example:9067', chainName: 'main', default: true },
     { uri: 'https://testnet.example:9067', chainName: 'test', default: true },
+    { uri: 'https://wallet-testnet.catecash.com:443', chainName: 'catecash-testnet', default: true },
+    { uri: 'https://wallet.catecash.com:443', chainName: 'catecash-mainnet', default: true },
     { uri: 'https://old.example:9067', chainName: 'main', obsolete: true },
   ],
 }));
@@ -69,6 +71,32 @@ test('Tests that a wallet without flags reads the defaults when its meta has non
   expect(settings.seedBackedUp).toBe(false);
   expect(settings.seedBackedUpAt).toBe(0);
   expect(settings.viewOnlyNoticeDismissed).toBe(false);
+});
+
+test('Tests that a Catecash testnet wallet uses its testnet gateway when its meta has no server.', async () => {
+  const choice = await SettingsFileImpl.serverOf({
+    chain: ChainNameEnum.catecashTestnetChainName,
+  });
+  expect(choice.server).toEqual(
+    remoteServer(
+      'https://wallet-testnet.catecash.com:443',
+      ChainNameEnum.catecashTestnetChainName,
+    ),
+  );
+  expect(choice.selectServer).toBe(SelectServerEnum.auto);
+});
+
+test('Tests that a Catecash mainnet wallet uses its mainnet gateway when its meta has no server.', async () => {
+  const choice = await SettingsFileImpl.serverOf({
+    chain: ChainNameEnum.catecashMainnetChainName,
+  });
+  expect(choice.server).toEqual(
+    remoteServer(
+      'https://wallet.catecash.com:443',
+      ChainNameEnum.catecashMainnetChainName,
+    ),
+  );
+  expect(choice.selectServer).toBe(SelectServerEnum.auto);
 });
 
 test('Tests that a server choice lands in the meta alone when a wallet is active.', async () => {

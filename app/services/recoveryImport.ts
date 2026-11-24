@@ -1,5 +1,8 @@
 import { ChainNameEnum, SelectServerEnum } from '@app/AppState';
-import ServerType, { remoteServer } from '@app/AppState/types/ServerType';
+import ServerType, {
+  offlineServer,
+  remoteServer,
+} from '@app/AppState/types/ServerType';
 import type { TranslateType } from '@app/AppState';
 import { serverUris } from '@app/uris';
 import { pickAutomatic } from '@app/services/serverPicking';
@@ -30,6 +33,12 @@ export const entryServer = async (
   translate: (key: string) => TranslateType,
   online: boolean,
 ): Promise<ServerChoice> => {
+  if (chain === ChainNameEnum.catecashDevnetChainName) {
+    return {
+      server: offlineServer(chain),
+      selectServer: SelectServerEnum.custom,
+    };
+  }
   if (chain !== ChainNameEnum.testChainName) {
     return {
       server: defaultServer(chain),

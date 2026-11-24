@@ -3,12 +3,14 @@
  */
 
 jest.mock('@app/RPCModule', () => ({
+  __esModule: true,
   default: {
     parseAddressInfo: jest.fn(),
   },
 }));
 
 import Utils from '@app/utils/Utils';
+import RPCModule from '@app/RPCModule';
 import { themeTokens } from '@app/theme';
 import {
   BlockExplorerEnum,
@@ -18,6 +20,33 @@ import {
 } from '@app/AppState';
 
 // react-native-localize mock returns decimalSeparator: '.'
+
+test('Tests that a Catecash mainnet wallet accepts its recipient and rejects a testnet recipient', async () => {
+  const parse = RPCModule.parseAddressInfo as jest.Mock;
+  parse.mockResolvedValueOnce(
+    JSON.stringify({
+      status: 'success',
+      chain_name: ChainNameEnum.catecashMainnetChainName,
+      address_kind: 'transparent',
+    }),
+  );
+  expect(
+    (await Utils.isValidAddress('CaRecipient', ChainNameEnum.catecashMainnetChainName))
+      .isValid,
+  ).toBe(true);
+
+  parse.mockResolvedValueOnce(
+    JSON.stringify({
+      status: 'success',
+      chain_name: ChainNameEnum.catecashTestnetChainName,
+      address_kind: 'transparent',
+    }),
+  );
+  expect(
+    (await Utils.isValidAddress('EMRecipient', ChainNameEnum.catecashMainnetChainName))
+      .isValid,
+  ).toBe(false);
+});
 
 describe('Utils.trimToSmall', () => {
   test('returns empty string for undefined', () => {
@@ -261,6 +290,16 @@ describe('Utils.getBlockExplorerTxIDURL', () => {
         BlockExplorerEnum.Zcashexplorer,
       ),
     ).toBe('');
+  });
+
+  test('Tests that a Catecash devnet transaction opens in CateScan with a saved Zcash explorer choice.', () => {
+    expect(
+      Utils.getBlockExplorerTxIDURL(
+        txid,
+        ChainNameEnum.catecashDevnetChainName,
+        BlockExplorerEnum.Zcashexplorer,
+      ),
+    ).toBe('https://scan-devnet.catecash.com/#/tx/abc123');
   });
 
   test('unknown explorer returns empty string', () => {

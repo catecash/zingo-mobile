@@ -581,6 +581,37 @@ final class ExecuteParseAddressInvalid: XCTestCase {
     }
 }
 
+final class CatecashMainnetBindingTests: XCTestCase {
+    func testMainnetWalletCreatesRestoresAndRejectsOtherChains() throws {
+        let connection = IndexerConnection(
+            indexer: .offline,
+            chainHint: "catecash-mainnet",
+            sync: SyncSettings(performanceLevel: "Medium", minConfirmations: 1)
+        )
+        _ = try initFromSeed(seed: Seeds.HOSPITAL, birthday: 1, connection: connection)
+        let original: [TransparentAddress] = try decodeJSON(getTransparentAddresses())
+        let address = try XCTUnwrap(original.first?.encoded_address)
+        XCTAssertTrue(address.hasPrefix("Ca"))
+
+        let parsed: ParseResult = try decodeJSON(parseAddress(address: address))
+        XCTAssertEqual(parsed.chain_name, "catecash-mainnet")
+        XCTAssertEqual(parsed.status, "success")
+
+        let saved = try XCTUnwrap(saveWalletBytes())
+        XCTAssertEqual(try readWalletChain(walletBytes: saved), "catecash-mainnet")
+        _ = try initFromBytes(walletBytes: saved, connection: connection)
+        let restored: [TransparentAddress] = try decodeJSON(getTransparentAddresses())
+        XCTAssertEqual(restored.first?.encoded_address, address)
+
+        let testnet = IndexerConnection(
+            indexer: .offline,
+            chainHint: "catecash-testnet",
+            sync: SyncSettings(performanceLevel: "Medium", minConfirmations: 1)
+        )
+        XCTAssertThrowsError(try initFromBytes(walletBytes: saved, connection: testnet))
+    }
+}
+
 /// The bridge-outcome contract for every migrated FFI (zingo-mobile#1151):
 /// whether a call succeeded is knowable from the channel of its result —
 /// resolved versus rejected — never from its content, and a rejection's

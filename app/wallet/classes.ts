@@ -34,6 +34,19 @@ export class SendPageStateClass {
 }
 
 export class TotalBalanceClass {
+  // Atomic strings from Catecash's scanned wallet. The wide address balance
+  // returned by GetTaddressBalance is a separate source.
+  catecashAtomic?: {
+    total: string;
+    ironwood: string;
+    orchard: string;
+    sapling: string;
+    transparent: string;
+    confirmedIronwood: string;
+    confirmedOrchard: string;
+    confirmedSapling: string;
+    confirmedTransparent: string;
+  };
   // Total transparent, confirmed and unconfirmed
   totalTransparentBalance: number;
 
@@ -95,11 +108,37 @@ const poolPairs = (
   },
 ];
 
-export const hasUnconfirmedFunds = (balance: TotalBalanceClass): boolean =>
-  poolPairs(balance).some(pool => pool.total !== pool.confirmed);
+export const hasUnconfirmedFunds = (balance: TotalBalanceClass): boolean => {
+  if (balance.catecashAtomic) {
+    const atomic = balance.catecashAtomic;
+    return (
+      atomic.ironwood !== atomic.confirmedIronwood ||
+      atomic.orchard !== atomic.confirmedOrchard ||
+      atomic.sapling !== atomic.confirmedSapling ||
+      atomic.transparent !== atomic.confirmedTransparent
+    );
+  }
+  return poolPairs(balance).some(pool => pool.total !== pool.confirmed);
+};
 
-export const hasFullyUnconfirmedPool = (balance: TotalBalanceClass): boolean =>
-  poolPairs(balance).some(pool => pool.total > 0 && pool.confirmed === 0);
+export const hasFullyUnconfirmedPool = (
+  balance: TotalBalanceClass,
+): boolean => {
+  if (balance.catecashAtomic) {
+    const atomic = balance.catecashAtomic;
+    return (
+      (BigInt(atomic.ironwood) > 0n &&
+        BigInt(atomic.confirmedIronwood) === 0n) ||
+      (BigInt(atomic.orchard) > 0n && BigInt(atomic.confirmedOrchard) === 0n) ||
+      (BigInt(atomic.sapling) > 0n && BigInt(atomic.confirmedSapling) === 0n) ||
+      (BigInt(atomic.transparent) > 0n &&
+        BigInt(atomic.confirmedTransparent) === 0n)
+    );
+  }
+  return poolPairs(balance).some(
+    pool => pool.total > 0 && pool.confirmed === 0,
+  );
+};
 
 export class TransparentAddressClass {
   index: number;

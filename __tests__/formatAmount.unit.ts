@@ -1,5 +1,6 @@
 import {
   formatAmount,
+  formatAtomicAmount,
   formatExactAmount,
   formatInteger,
   formatPercent,
@@ -28,6 +29,13 @@ describe('on a device with a decimal comma', () => {
 
   test('Tests that an exact amount keeps every decimal', () => {
     expect(formatExactAmount('1.234567891')).toBe('1,234567891');
+  });
+
+  test('Tests that a 128-bit Catecash amount formats exactly above 2^53', () => {
+    expect(formatAtomicAmount('9007199254740993')).toBe('90071992,5474');
+    expect(
+      formatAtomicAmount('340282366920938463463374607431768211455', 8),
+    ).toBe('3402823669209384634633746074317,68211455');
   });
 
   test('Tests that dollars take two decimals and no grouping', () => {

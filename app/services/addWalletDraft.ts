@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from 'react';
 import { ChainNameEnum, SelectServerEnum, ServerType } from '@app/AppState';
-import { offlineServer } from '@app/AppState/types/ServerType';
+import { offlineServer, remoteServer } from '@app/AppState/types/ServerType';
+import { serverUris } from '@app/uris';
+import { isCatecashApp } from '@app/utils/ZingoAppData';
 
 /**
  * The network and server of a wallet being added, before it exists: what
@@ -14,7 +16,14 @@ export type AddWalletDraft = {
 };
 
 let draft: AddWalletDraft = {
-  server: offlineServer(ChainNameEnum.mainChainName),
+  server: isCatecashApp()
+    ? remoteServer(
+        serverUris(() => {}).find(
+          s => s.chainName === ChainNameEnum.catecashMainnetChainName && s.default,
+        )!.uri,
+        ChainNameEnum.catecashMainnetChainName,
+      )
+    : offlineServer(ChainNameEnum.mainChainName),
   selectServer: SelectServerEnum.auto,
   keyChain: { kind: 'none' },
 };

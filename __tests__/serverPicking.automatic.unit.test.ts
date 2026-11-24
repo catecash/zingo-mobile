@@ -79,7 +79,11 @@ test('Tests that the default server is used when nothing answers or there is no 
   });
 });
 
-test.each([ChainNameEnum.mainChainName, ChainNameEnum.testChainName])(
+test.each([
+  ChainNameEnum.mainChainName,
+  ChainNameEnum.testChainName,
+  ChainNameEnum.catecashDevnetChainName,
+])(
   'Tests that the %s network has exactly one default server',
   chain => {
     expect(

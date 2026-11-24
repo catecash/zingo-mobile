@@ -30,8 +30,13 @@ type HoshServer = {
 const fetchServerList = async (
   chainName: ChainNameEnum,
 ): Promise<ServerUrisType[]> => {
-  // Regtest is a local dev chain — no public registry.
-  if (chainName === ChainNameEnum.regtestChainName) {
+  // Catecash networks have their own server list.
+  if (
+    chainName === ChainNameEnum.regtestChainName ||
+    chainName === ChainNameEnum.catecashDevnetChainName ||
+    chainName === ChainNameEnum.catecashTestnetChainName ||
+    chainName === ChainNameEnum.catecashMainnetChainName
+  ) {
     return [];
   }
   const chain = chainName === ChainNameEnum.testChainName ? 'test' : 'main';

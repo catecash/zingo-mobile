@@ -170,6 +170,33 @@ const serverUris = (
       latency: null,
       obsolete: false,
     },
+    {
+      uri: 'https://wallet.catecash.com:443',
+      region: '',
+      chainName: ChainNameEnum.catecashMainnetChainName,
+      default: true,
+      latency: null,
+      obsolete: false,
+      recommended: true,
+    },
+    {
+      uri: 'https://wallet-testnet.catecash.com:443',
+      region: '',
+      chainName: ChainNameEnum.catecashTestnetChainName,
+      default: true,
+      latency: null,
+      obsolete: false,
+      recommended: true,
+    },
+    {
+      uri: 'https://wallet-devnet.catecash.com:443',
+      region: '',
+      chainName: ChainNameEnum.catecashDevnetChainName,
+      default: true,
+      latency: null,
+      obsolete: false,
+      recommended: true,
+    },
   ];
 };
 

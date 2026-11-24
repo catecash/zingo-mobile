@@ -44,10 +44,16 @@ export function getZingoName(): string {
   return getApplicationName();
 }
 
+export function isCatecashApp(): boolean {
+  const name = getApplicationName();
+  return name === 'Catecash' || name === 'Catecash Beta';
+}
+
 // `require()` is resolved by Metro at bundle time, so both assets are shipped
 // in every build; the runtime check just picks which one to render.
 const PROD_LOGO = require('../../assets/img/logobig-zingo.png');
 const BETA_LOGO = require('../../assets/img/logobig-zingo-beta.png');
+const CATECASH_LOGO = require('../../assets/catecash/cat-icon.webp');
 
 /**
  * Big Zingo logo asset (drawer header, splash, QR center, etc).
@@ -55,7 +61,14 @@ const BETA_LOGO = require('../../assets/img/logobig-zingo-beta.png');
  * production logo. Detection follows the same runtime app-name signal as
  * `getZingoName()`.
  */
-export function getZingoLogo() {
+export function getZingoLogo(chainName?: string) {
+  if (
+    chainName === 'catecash-devnet' ||
+    chainName === 'catecash-testnet' ||
+    chainName === 'catecash-mainnet' ||
+    isCatecashApp()
+  )
+    return CATECASH_LOGO;
   return getApplicationName() === 'Zingo Beta' ? BETA_LOGO : PROD_LOGO;
 }
 

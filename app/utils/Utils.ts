@@ -151,6 +151,15 @@ export default class Utils {
     chainName: ChainNameEnum,
     blockExplorer: BlockExplorerEnum,
   ): string {
+    if (chainName === ChainNameEnum.catecashDevnetChainName) {
+      return `https://scan-devnet.catecash.com/#/tx/${encodeURIComponent(txid)}`;
+    }
+    if (chainName === ChainNameEnum.catecashTestnetChainName) {
+      return `https://scan-testnet.catecash.com/#/tx/${encodeURIComponent(txid)}`;
+    }
+    if (chainName === ChainNameEnum.catecashMainnetChainName) {
+      return `https://scan.catecash.com/#/tx/${encodeURIComponent(txid)}`;
+    }
     // Regtest is a local dev chain no public explorer can index — never link,
     // regardless of the selected explorer. Returning '' makes every caller
     // hide the affordance.

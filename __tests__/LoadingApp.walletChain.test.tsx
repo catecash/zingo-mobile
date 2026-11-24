@@ -10,9 +10,11 @@ import {
   LanguageEnum,
   LaunchingModeEnum,
   SelectServerEnum,
+  Route,
 } from '@app/AppState';
 import { remoteServer } from '@app/AppState/types/ServerType';
 import RPCModule from '@app/RPCModule';
+import * as ZingoAppData from '@app/utils/ZingoAppData';
 
 jest.mock('@app/RPCModule', () =>
   require('../__mocks__/rpcModuleProxy').rpcModuleProxyMock(),
@@ -117,5 +119,29 @@ describe('A wallet on another network than its server', () => {
       SelectServerEnum.auto,
     );
     expect(open).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('The Catecash app at launch', () => {
+  test('Tests that a saved ZEC wallet does not connect when no Catecash wallet exists', async () => {
+    const catecash = jest.spyOn(ZingoAppData, 'isCatecashApp').mockReturnValue(true);
+    jest.clearAllMocks();
+    bridge.walletExists.mockResolvedValue('true');
+    bridge.walletsInfo.mockResolvedValue(
+      JSON.stringify({
+        active: 'zec-wallet',
+        wallets: [
+          { id: 'zec-wallet', hasFile: true, meta: { chain: 'main' } },
+        ],
+      }),
+    );
+    const { app } = bootApp(SelectServerEnum.custom);
+
+    await app.componentDidMount();
+
+    expect(app.props.openOnboarding).toHaveBeenCalledWith(Route.Welcome);
+    expect(bridge.loadExistingWallet).not.toHaveBeenCalled();
+    expect(bridge.loadWallet).not.toHaveBeenCalled();
+    catecash.mockRestore();
   });
 });

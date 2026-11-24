@@ -1,4 +1,9 @@
-import { getZingoName, substituteZingoName } from '@app/utils/ZingoAppData';
+import {
+  getZingoName,
+  isCatecashApp,
+  substituteZingoName,
+} from '@app/utils/ZingoAppData';
+import { getApplicationName } from 'react-native-device-info';
 import en from '@app/translations/en.json';
 import es from '@app/translations/es.json';
 import pt from '@app/translations/pt.json';
@@ -16,6 +21,14 @@ const strings = (o: object, prefix = ''): [string, string][] =>
   );
 
 const LANGUAGES = { en, es, pt, ru, tr };
+
+test.each(['Catecash', 'Catecash Beta'])(
+  'Tests that %s selects the Catecash wallet at launch',
+  name => {
+    jest.mocked(getApplicationName).mockReturnValueOnce(name);
+    expect(isCatecashApp()).toBe(true);
+  },
+);
 /** The texts a screen fills with .replace('{name}', …). */
 const SCREEN_FILLED = [
   'history.sent-to',

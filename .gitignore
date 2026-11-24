@@ -27,6 +27,8 @@ DerivedData
 *.xcuserstate
 **/.xcode.env.local
 ios/vendor/
+/.bundle/
+/vendor/
 
 android/app/release/
 android/app/beta/release/
@@ -62,6 +64,10 @@ nohup.out
 buck-out/
 \.buckd/
 *.keystore
+*.key
+*.pem
+*.p12
+*.pfx
 !debug.keystore
 
 # fastlane

@@ -11,6 +11,21 @@ export const decimalSeparator = () =>
 
 const localize = (dotted: string) => dotted.replace('.', decimalSeparator());
 
+/** Formats a decimal atomic-unit string without passing through Number. */
+export function formatAtomicAmount(atomic: string, maxDecimals = 4): string {
+  if (!/^\d+$/.test(atomic) || maxDecimals < 0 || maxDecimals > 8) {
+    throw new Error('Invalid atomic amount');
+  }
+  const value = BigInt(atomic);
+  const whole = (value / 100000000n).toString();
+  const fractional = (value % 100000000n)
+    .toString()
+    .padStart(8, '0')
+    .slice(0, maxDecimals);
+  const trimmed = fractional.replace(/0+$/, '');
+  return localize(`${whole}.${trimmed || '0'}`);
+}
+
 /** Cuts `value` to `decimals` places without rounding, as dotted text. */
 const cut = (value: number, decimals: number): string => {
   const [whole, fraction = ''] = Math.abs(value).toFixed(10).split('.');

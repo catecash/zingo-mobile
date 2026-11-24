@@ -7,15 +7,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  */
 export const SAVED_BALANCE_KEY_PREFIX = 'wallet:balance:';
 
-export type SavedBalance = { kind: 'none' } | { kind: 'saved'; total: number };
+export type SavedBalance =
+  { kind: 'none' } | { kind: 'saved'; total: number; atomic?: string };
 
 export async function writeSavedBalance(
   walletId: string,
-  total: number,
+  total: number | { atomic: string },
 ): Promise<void> {
   await AsyncStorage.setItem(
     SAVED_BALANCE_KEY_PREFIX + walletId,
-    String(total),
+    typeof total === 'number' ? String(total) : `atomic:${total.atomic}`,
   );
 }
 
@@ -28,6 +29,11 @@ export async function readSavedBalances(
   );
   const balances: Record<string, SavedBalance> = {};
   walletIds.forEach((id, i) => {
+    const atomic = stored[i]?.match(/^atomic:(\d+)$/)?.[1];
+    if (atomic !== undefined) {
+      balances[id] = { kind: 'saved', total: 0, atomic };
+      return;
+    }
     const total = Number(stored[i]);
     balances[id] =
       stored[i] !== null && Number.isFinite(total)

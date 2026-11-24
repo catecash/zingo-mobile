@@ -14,7 +14,7 @@ import {
   PACKAGE,
   placement,
 } from 'zingolib-bundle-pin/lib/swift_package.mjs';
-import { IOS_STORE, PIN } from './fetch_binding_layer.mjs';
+import { IOS_STORE, PIN, localCatecashBinding } from './fetch_binding_layer.mjs';
 
 const FETCH = 'yarn --silent fetch:binding-layer --platform ios';
 
@@ -38,6 +38,10 @@ function textOf(path) {
 
 if (basename(process.argv[1] ?? '') === 'check_ios_binding_layer.mjs') {
   const root = resolve(dirname(process.argv[1]), '..');
+  if (process.env.CATECASH_LOCAL_BINDINGS === '1') {
+    localCatecashBinding(root);
+    process.exit(0);
+  }
   const store = join(root, IOS_STORE);
   const state = iosBundleState(
     JSON.parse(readFileSync(join(root, PIN), 'utf8')),

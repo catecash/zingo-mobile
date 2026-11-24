@@ -1,19 +1,21 @@
+export type RPCAtomicBalance = number | string | null;
+
 export type RPCBalancesType = {
-  total_orchard_balance: number;
-  total_sapling_balance: number;
-  total_transparent_balance: number;
+  total_orchard_balance: RPCAtomicBalance;
+  total_sapling_balance: RPCAtomicBalance;
+  total_transparent_balance: RPCAtomicBalance;
 
-  confirmed_transparent_balance: number;
-  confirmed_orchard_balance: number;
-  confirmed_sapling_balance: number;
+  confirmed_transparent_balance: RPCAtomicBalance;
+  confirmed_orchard_balance: RPCAtomicBalance;
+  confirmed_sapling_balance: RPCAtomicBalance;
 
-  unconfirmed_orchard_balance: number;
-  unconfirmed_sapling_balance: number;
-  unconfirmed_transparent_balance: number;
+  unconfirmed_orchard_balance: RPCAtomicBalance;
+  unconfirmed_sapling_balance: RPCAtomicBalance;
+  unconfirmed_transparent_balance: RPCAtomicBalance;
 
   // Ironwood (NU6.3) pool. zingolib emits these as Option, so they may be
   // null/absent before activation or on wallets without Ironwood funds.
-  total_ironwood_balance?: number | null;
-  confirmed_ironwood_balance?: number | null;
-  unconfirmed_ironwood_balance?: number | null;
+  total_ironwood_balance?: RPCAtomicBalance;
+  confirmed_ironwood_balance?: RPCAtomicBalance;
+  unconfirmed_ironwood_balance?: RPCAtomicBalance;
 };

@@ -13,8 +13,6 @@
 import {
   TotalBalanceClass,
   InfoType,
-  ChainNameEnum,
-  CurrencyNameEnum,
   AddressKindEnum,
   GlobalConst,
   ValueTransferType,
@@ -22,6 +20,7 @@ import {
   TransparentAddressClass,
   foldBlockSpacing,
 } from '@app/AppState';
+import { currencyForChain } from '@app/AppState/enums/CurrencyNameEnum';
 import {
   noteHeights,
   resetFreshness,
@@ -29,6 +28,7 @@ import {
 import RPCModule from '@app/RPCModule';
 import { RPCUnifiedAddressType } from '@app/walletBackend/types/RPCUnifiedAddressType';
 import { RPCBalancesType } from '@app/walletBackend/types/RPCBalancesType';
+import { catecashAtomicBalance } from '@app/walletBackend/utils/catecashAtomicBalance';
 import { RPCInfoType } from '@app/walletBackend/types/RPCInfoType';
 import { RPCWalletHeight } from '@app/walletBackend/types/RPCWalletHeightType';
 import { RPCValueTransfersType } from '@app/walletBackend/types/RPCValueTransfersType';
@@ -131,22 +131,31 @@ export class DataService {
       const balanceJSON: RPCBalancesType = await JSON.parse(balanceStr);
 
       const balance: TotalBalanceClass = {
-        totalOrchardBalance: (balanceJSON.total_orchard_balance || 0) / 10 ** 8,
+        totalOrchardBalance:
+          Number(balanceJSON.total_orchard_balance || 0) / 10 ** 8,
         totalIronwoodBalance:
-          (balanceJSON.total_ironwood_balance || 0) / 10 ** 8,
-        totalSaplingBalance: (balanceJSON.total_sapling_balance || 0) / 10 ** 8,
+          Number(balanceJSON.total_ironwood_balance || 0) / 10 ** 8,
+        totalSaplingBalance:
+          Number(balanceJSON.total_sapling_balance || 0) / 10 ** 8,
         totalTransparentBalance:
-          (balanceJSON.total_transparent_balance || 0) / 10 ** 8,
+          Number(balanceJSON.total_transparent_balance || 0) / 10 ** 8,
         confirmedOrchardBalance:
-          (balanceJSON.confirmed_orchard_balance || 0) / 10 ** 8,
+          Number(balanceJSON.confirmed_orchard_balance || 0) / 10 ** 8,
         confirmedIronwoodBalance:
-          (balanceJSON.confirmed_ironwood_balance || 0) / 10 ** 8,
+          Number(balanceJSON.confirmed_ironwood_balance || 0) / 10 ** 8,
         confirmedSaplingBalance:
-          (balanceJSON.confirmed_sapling_balance || 0) / 10 ** 8,
+          Number(balanceJSON.confirmed_sapling_balance || 0) / 10 ** 8,
         confirmedTransparentBalance:
-          (balanceJSON.confirmed_transparent_balance || 0) / 10 ** 8,
+          Number(balanceJSON.confirmed_transparent_balance || 0) / 10 ** 8,
         totalSpendableBalance: (spendableJSON.spendable_balance || 0) / 10 ** 8,
       };
+      if (
+        this.config.server.chainName === 'catecash-devnet' ||
+        this.config.server.chainName === 'catecash-testnet' ||
+        this.config.server.chainName === 'catecash-mainnet'
+      ) {
+        balance.catecashAtomic = catecashAtomicBalance(balanceJSON);
+      }
       this.config.onBalanceChanged(balance);
     } catch (error) {
       console.log(`Critical Error balances ${error}`);
@@ -312,10 +321,7 @@ export class DataService {
         version: `${infoJSON.vendor}/${infoJSON.git_commit ? infoJSON.git_commit.substring(0, 6) : ''}/${
           infoJSON.version
         }`,
-        currencyName:
-          infoJSON.chain_name === ChainNameEnum.mainChainName
-            ? CurrencyNameEnum.ZEC
-            : CurrencyNameEnum.TAZ,
+        currencyName: currencyForChain(infoJSON.chain_name),
         // `?? null` collapses both "no activation scheduled" (null) and "older
         // native lib that doesn't report it" (undefined) into the same
         // not-yet-active answer.

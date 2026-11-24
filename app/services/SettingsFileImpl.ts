@@ -92,6 +92,28 @@ const defaultWireFor = (chain: ChainNameEnum | undefined): ServerWire => {
 
 /** The wallet's own server, its network's default in Automatic when it has none, and that default too when the list marks its server obsolete and the user did not set it as custom. */
 const walletServer = (meta: WalletMetaPatch): ServerSettings => {
+  if (
+    meta.chain === ChainNameEnum.catecashDevnetChainName ||
+    meta.chain === ChainNameEnum.catecashTestnetChainName ||
+    meta.chain === ChainNameEnum.catecashMainnetChainName
+  ) {
+    const chain = meta.chain;
+    const saved = meta.server?.uri;
+    const explicitlyOffline = meta.selectServer === 'offline';
+    const fallback = defaultWireFor(chain);
+    return {
+      server: saved
+        ? remoteServer(saved, chain)
+        : explicitlyOffline
+          ? offlineServer(chain)
+          : remoteServer(fallback.uri, chain),
+      selectServer: saved
+        ? (meta.selectServer as SelectServerEnum) || SelectServerEnum.custom
+        : explicitlyOffline
+          ? SelectServerEnum.custom
+          : SelectServerEnum.auto,
+    };
+  }
   const fallback = defaultWireFor(meta.chain);
   const server: ServerWire = meta.server
     ? {
