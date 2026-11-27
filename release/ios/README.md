@@ -6,8 +6,8 @@ The `screenshots/iphone-17-pro/en-US` images are direct captures of the iOS 26.3
 
 The text in `metadata/en-US` describes the Mainnet wallet and is saved in App Store Connect. `app-store-connect.md` records the remaining fields and checks. The wallet privacy policy is live at `https://catecash.com/privacy/`.
 
-The production Xcode target uses `com.catecash.wallet`, version 1.0, build 326, and supports iPhone and iPad. The separate Beta configuration keeps `org.catecash.devnet.beta`.
+The production Xcode target uses `com.catecash.wallet`, version 1.0, build 329, and supports iPhone and iPad. The separate Beta configuration keeps `org.catecash.devnet.beta`.
 
-The icon has a centered green shield for build 326. The screenshots here still show Devnet. Capture Mainnet screens from the final release build before submission.
+The icon has a centered green shield for build 329. The screenshots here still show Devnet. Capture Mainnet screens from the final release build before submission.
 
 References: https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications and https://developer.apple.com/app-store/review/guidelines/

@@ -5,8 +5,11 @@ Instructions
 1. Open the app and tap Create new wallet. Follow the recovery phrase backup flow. No account, login, or demo credentials are required. Use a new review wallet rather than a personal recovery phrase.
 2. After the wallet opens, allow it to sync. The Home screen shows the balance and sync status. Tap Receive to view an address and QR code. Tap History to view transactions. A new empty wallet has no transaction history.
 3. Tap Options, then Server, to inspect the Catecash Mainnet connection. The default server is https://wallet.catecash.com:443. The reviewer can choose a custom server.
-4. Tap Send to enter a Catecash address or scan its QR code. The reviewer can inspect the Send form with a new wallet. A completed transfer requires a funded wallet and destination address. The app uses the camera only for an address scan. Face ID is optional when the device lock setting is enabled.
+4. Tap Send to enter a Catecash address or scan its QR code. The reviewer can inspect the Send form with a new wallet. A completed transfer requires a funded wallet and destination address.
 5. To test recovery, use Restore wallet on the opening screen with the review wallet's recovery phrase, then allow the wallet to sync.
+
+Protected resources
+The camera scans QR codes for wallet addresses, recovery phrases, and viewing keys when the reviewer opens a scanner. To test it, open Send and tap the scan button beside the destination address. Face ID unlocks the wallet when the reviewer enables biometric lock in Options. The camera SDK contains optional location APIs, but Catecash disables location support and does not request location for QR scanning. The Info.plist includes NSLocationWhenInUseUsageDescription because the linked SDK references Core Location.
 
 External services
 The default Catecash wallet endpoint, wallet.catecash.com, provides blockchain data and accepts signed transactions through the Catecash light-wallet service. Outgoing transactions use the Nym mixnet transport. Optional support and privacy links open catecash.com. Face ID uses Apple's on-device authentication. The app has no account authentication provider, AI model, fiat payment processor, or in-app purchase service.

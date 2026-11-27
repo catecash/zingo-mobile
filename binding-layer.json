@@ -11,8 +11,8 @@
     "ios": {
       "source": "../zingolib/bindings/swift",
       "files": {
-        "build/Zingolib.xcframework/ios-arm64/libzingo.a": "sha256:813895a1a21fe4a07d7413648524c2ace20943c9688fd3f2d4c6c8f0194fe911",
-        "build/Zingolib.xcframework/ios-arm64_x86_64-simulator/libzingo.a": "sha256:84d013ef9c107b373edeaa1ed91761fe2c0136e1e58cef3f41002d6fb2b80a54",
+        "build/Zingolib.xcframework/ios-arm64/libzingo.a": "sha256:ba71b3bf3689731a54671912d6cc5e69fdbd9a59cfac22386c630d1c2d4232b5",
+        "build/Zingolib.xcframework/ios-arm64_x86_64-simulator/libzingo.a": "sha256:a01b05ded12e03f1998be0dce3340143b2ed84633071eca118e31adc1fcc6496",
         "build/Sources/ZingoBindings/zingo.swift": "sha256:56244fb8c38d470ba0b5bc600cbb18a3bcbc438cdb29881dbab21a48a3b808ae",
         "build/Zingolib.xcframework/Info.plist": "sha256:18c8841223dfaf9c321d64ddceed74346bc2584e68abacfa9322437cbb97b0bc"
       }

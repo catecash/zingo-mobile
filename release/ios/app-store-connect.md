@@ -13,7 +13,7 @@ The Mainnet product copy and review notes are saved in App Store Connect. The co
 | Support URL | `https://catecash.com/support/` |
 | Privacy policy URL | `https://catecash.com/privacy/` |
 
-App Store Connect uses `com.catecash.wallet` and version 1.0. The production iOS target matches those values and uses build 326.
+App Store Connect uses `com.catecash.wallet` and version 1.0. The production iOS target matches those values and uses build 329.
 
 ## Before submission
 

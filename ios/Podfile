@@ -11,6 +11,7 @@ IOS_DEPLOYMENT_TARGET = '16.0'
 
 platform :ios, IOS_DEPLOYMENT_TARGET
 prepare_react_native_project!
+$VCEnableLocation = false
  
 linkage = ENV['USE_FRAMEWORKS']
 if linkage != nil
