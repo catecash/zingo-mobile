@@ -18,7 +18,8 @@ jest.mock('@app/services/showConfirm', () => ({
 }));
 
 import { act, renderHook } from '@testing-library/react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useState } from 'react';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 
 import type { TranslateType } from '@app/AppState';
 import { useShieldFunds } from '@app/hooks/useShieldFunds';
@@ -57,7 +58,7 @@ const hookInput = (
     readOnly: false,
     setShieldingAmount: jest.fn(),
     server: inputs.server,
-    somePending: false,
+    chainHeight: 100,
     totalBalance: null,
     shieldingAmount: 0.5,
     translate,
@@ -99,6 +100,7 @@ const confirmAfter = async (
 beforeEach(() => {
   jest.clearAllMocks();
   (useNavigation as jest.Mock).mockReturnValue({ navigate: jest.fn() });
+  (useIsFocused as jest.Mock).mockReturnValue(true);
   proposeMock.mockResolvedValue({ ok: true, value: '{}' });
   confirmMock.mockResolvedValue({ ok: true, value: '{"txids":["txid"]}' });
 });
@@ -151,22 +153,137 @@ describe('useShieldFunds send permit', () => {
 });
 
 describe('useShieldFunds propose and preview', () => {
+  test('Tests that a mature reward restores Shield on a later block after a successful shield. The displayed balance stays unchanged.', async () => {
+    const previewMock = shieldPreview as jest.Mock;
+    previewMock
+      .mockResolvedValueOnce({
+        ok: true,
+        value: JSON.stringify({ value_to_shield: 0.5 * 10 ** 8, fee: 1 }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        value: JSON.stringify({ value_to_shield: 0, fee: 0 }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        value: JSON.stringify({ value_to_shield: 5000 * 10 ** 8, fee: 1 }),
+      });
+    const balance = {
+      totalTransparentBalance: 5000.5,
+      confirmedTransparentBalance: 0.5,
+    } as TotalBalanceClass;
+    const { result, rerender } = renderHook(
+      ({ chainHeight }: { chainHeight: number }) => {
+        const [shieldingAmount, setShieldingAmount] = useState(0);
+        return useShieldFunds({
+          ...hookInput(online, jest.fn()),
+          chainHeight,
+          totalBalance: balance,
+          shieldingAmount,
+          setShieldingAmount,
+        });
+      },
+      { initialProps: { chainHeight: 100 } },
+    );
+    await act(async () => {});
+    expect(result.current.showShieldButton).toBe(true);
+
+    await act(async () => {
+      await result.current.shieldNow();
+    });
+    expect(result.current.showShieldButton).toBe(false);
+
+    rerender({ chainHeight: 101 });
+    await act(async () => {});
+    expect(result.current.showShieldButton).toBe(false);
+
+    rerender({ chainHeight: 102 });
+    await act(async () => {});
+    expect(previewMock).toHaveBeenCalledTimes(3);
+    expect(result.current.showShieldButton).toBe(true);
+  });
+
+  test('Tests that a failed preview keeps the shield amount shown while the transparent balance is unchanged.', async () => {
+    const previewMock = shieldPreview as jest.Mock;
+    previewMock
+      .mockResolvedValueOnce({
+        ok: true,
+        value: JSON.stringify({ value_to_shield: 0.5 * 10 ** 8, fee: 1 }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        error: { code: 'Shield', message: 'preview failed' },
+      });
+    const setShieldingAmount = jest.fn();
+    const input = {
+      ...hookInput(online, jest.fn()),
+      totalBalance: {
+        totalTransparentBalance: 0.5,
+        confirmedTransparentBalance: 0.5,
+      } as TotalBalanceClass,
+      setShieldingAmount,
+    };
+    const { rerender } = renderHook(() => useShieldFunds(input));
+    await act(async () => {});
+    (useIsFocused as jest.Mock).mockReturnValue(false);
+    rerender({});
+    (useIsFocused as jest.Mock).mockReturnValue(true);
+    rerender({});
+    await act(async () => {});
+
+    expect(previewMock).toHaveBeenCalledTimes(2);
+    expect(setShieldingAmount).toHaveBeenCalledTimes(1);
+    expect(setShieldingAmount).toHaveBeenCalledWith(0.5);
+  });
+
+  test('Tests that returning to History previews the same transparent balance after a failed shield is removed.', async () => {
+    const previewMock = shieldPreview as jest.Mock;
+    previewMock.mockResolvedValue({
+      ok: true,
+      value: JSON.stringify({ value_to_shield: 0.5 * 10 ** 8, fee: 1 }),
+    });
+    const setShieldingAmount = jest.fn();
+    const input = {
+      ...hookInput(online, jest.fn()),
+      totalBalance: {
+        totalTransparentBalance: 0.5,
+        confirmedTransparentBalance: 0.5,
+      } as TotalBalanceClass,
+      setShieldingAmount,
+    };
+    const { rerender } = renderHook(() => useShieldFunds(input));
+    await act(async () => {});
+    (useIsFocused as jest.Mock).mockReturnValue(false);
+    rerender({});
+    (useIsFocused as jest.Mock).mockReturnValue(true);
+    rerender({});
+    await act(async () => {});
+
+    expect(previewMock).toHaveBeenCalledTimes(2);
+    expect(setShieldingAmount).toHaveBeenLastCalledWith(0.5);
+  });
+
   test('Tests that confirming does not transmit when the shield proposal fails. The proposal error is what the send screen shows.', async () => {
     const navigate = jest.fn();
     (useNavigation as jest.Mock).mockReturnValue({ navigate });
+    const setShieldingAmount = jest.fn();
     proposeMock.mockResolvedValue({
       ok: false,
       error: { code: 'Send', message: 'insufficient funds to cover the fee' },
     });
-    const { result } = renderHook(() =>
-      useShieldFunds(hookInput(online, jest.fn())),
-    );
+    const input = {
+      ...hookInput(online, jest.fn()),
+      setShieldingAmount,
+    };
+    const { result } = renderHook(() => useShieldFunds(input));
+    setShieldingAmount.mockClear();
     const confirm = openConfirmDialog(result.current.onPressShieldFunds);
     await act(async () => {
       await confirm();
     });
 
     expect(confirmMock).not.toHaveBeenCalled();
+    expect(setShieldingAmount).not.toHaveBeenCalled();
     expect(navigate).toHaveBeenLastCalledWith(
       'Computing',
       expect.objectContaining({
@@ -190,7 +307,10 @@ describe('useShieldFunds propose and preview', () => {
     );
     const setShieldingAmount = jest.fn();
     const balance = (transparent: number) =>
-      ({ confirmedTransparentBalance: transparent }) as TotalBalanceClass;
+      ({
+        totalTransparentBalance: transparent,
+        confirmedTransparentBalance: transparent,
+      }) as TotalBalanceClass;
     const { rerender } = renderHook(
       ({ totalBalance }: { totalBalance: TotalBalanceClass }) =>
         useShieldFunds({

@@ -108,7 +108,7 @@ const Pools: React.FunctionComponent<PoolsProps> = ({ navigation }) => {
     readOnly,
     setShieldingAmount,
     server,
-    somePending,
+    chainHeight: info.latestBlock,
     totalBalance,
     shieldingAmount,
     translate,

@@ -27,6 +27,7 @@ const CHAIN_ICONS: Record<string, ImageSourcePropType> = {
   BERA: require('../../assets/chains/bera.png'),
   BSC: require('../../assets/chains/bsc.png'),
   BTC: require('../../assets/chains/btc.png'),
+  CATE: require('../../assets/catecash/cat-icon.webp'),
   CRO: require('../../assets/chains/cro.png'),
   DASH: require('../../assets/chains/dash.png'),
   DOGE: require('../../assets/chains/doge.png'),

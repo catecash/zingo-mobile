@@ -3,7 +3,7 @@ import React, { useContext, useState } from 'react';
 import { Keyboard, View } from 'react-native';
 
 import { space12, space4, space16, space20 } from '@app/theme';
-import { AddressBookFileClass, GlobalConst } from '@app/AppState';
+import { AddressBookFileClass, ChainNameEnum, GlobalConst } from '@app/AppState';
 import { ContextAppLoaded } from '@app/context';
 import AddressBookFileImpl from '@app/services/AddressBookFileImpl';
 import Utils from '@app/utils';
@@ -38,7 +38,12 @@ const NewAddressTag: React.FunctionComponent<NewAddressTagProps> = ({
   closeSheet,
   setAddressBook,
 }) => {
-  const { translate, server } = useContext(ContextAppLoaded);
+  const { translate, walletChainName, server } = useContext(ContextAppLoaded);
+  const chain = walletChainName || server.chainName;
+  const catecash =
+    chain === ChainNameEnum.catecashDevnetChainName ||
+    chain === ChainNameEnum.catecashTestnetChainName ||
+    chain === ChainNameEnum.catecashMainnetChainName;
   const [label, setLabel] = useState(current?.label ?? '');
   const [saving, setSaving] = useState(false);
   const ready = label.trim().length > 0;
@@ -52,7 +57,7 @@ const NewAddressTag: React.FunctionComponent<NewAddressTagProps> = ({
         address,
         current?.color ?? Utils.generateColorList(1)[0],
         true,
-        server.chainName,
+        chain,
         GlobalConst.zecSwapChain,
       ),
     );
@@ -86,6 +91,7 @@ const NewAddressTag: React.FunctionComponent<NewAddressTagProps> = ({
           options={[GlobalConst.zecSwapChain]}
           onChange={() => {}}
           translate={translate}
+          nativeAsset={catecash ? { name: 'Catecash', ticker: 'CATE' } : undefined}
           disabled
         />
       </View>

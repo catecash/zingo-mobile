@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { showConfirm } from '@app/services/showConfirm';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { WalletNavigation } from '@app/types';
 import {
   PoolToShieldEnum,
@@ -30,7 +30,7 @@ type UseShieldFundsInput = {
   readOnly: boolean;
   setShieldingAmount: ((value: number) => void) | undefined;
   server: ServerType;
-  somePending: boolean;
+  chainHeight: number;
   totalBalance: TotalBalanceClass | null;
   shieldingAmount: number;
   translate: (key: string) => TranslateType;
@@ -55,21 +55,19 @@ type UseShieldFundsResult = {
 /**
  * Orchestrates the transparent-pool shielding flow.
  *
- * Runs a shield proposal on mount / when balance changes to pre-calculate the
+ * Previews shielding when the balance or chain height changes to calculate the
  * fee and shieldable amount. Exposes `onPressShieldFunds` which shows a
  * confirmation alert then executes the shield transaction via RPC, navigates
  * to the Computing screen while work is in progress, and returns to History on
  * success.
  *
- * `showShieldButton` is true only when there is a positive unshielded balance,
- * no pending transactions, the wallet is not read-only, and the server is
- * online.
+ * `showShieldButton` follows the latest spendable shield proposal.
  */
 export function useShieldFunds({
   readOnly,
   setShieldingAmount,
   server,
-  somePending,
+  chainHeight,
   totalBalance,
   shieldingAmount,
   translate,
@@ -80,16 +78,22 @@ export function useShieldFunds({
   sendPermitNow,
 }: UseShieldFundsInput): UseShieldFundsResult {
   const navigation = useNavigation<WalletNavigation>();
+  const focused = useIsFocused();
   const [showShieldButton, setShowShieldButton] = useState<boolean>(false);
   const [shieldingFee, setShieldingFee] = useState<number>(0);
   useEffect(() => {
-    // A newer balance asks again; an answer for an older one is dropped.
+    // A newer balance or block asks again; an older answer is dropped.
     let cancelled = false;
+    if (!focused) {
+      return () => {
+        cancelled = true;
+      };
+    }
     if (
       !readOnly &&
       !!setShieldingAmount &&
       server.kind !== 'offline' &&
-      (somePending ? 0 : (totalBalance?.confirmedTransparentBalance ?? 0)) > 0
+      (totalBalance?.totalTransparentBalance ?? 0) > 0
     ) {
       (async () => {
         let proposeFee = 0;
@@ -100,24 +104,25 @@ export function useShieldFunds({
         }
         if (!runPropose.ok) {
           console.log('Error shield proposing', runPropose.error.message);
-        } else {
-          try {
-            const runProposeJson: RPCShieldProposeType = JSON.parse(
-              runPropose.value,
-            );
-            if (runProposeJson.error) {
-              console.log('Error shield proposing', runProposeJson.error);
-            } else {
-              if (runProposeJson.fee) {
-                proposeFee = runProposeJson.fee / 10 ** 8;
-              }
-              if (runProposeJson.value_to_shield) {
-                proposeAmount = runProposeJson.value_to_shield / 10 ** 8;
-              }
-            }
-          } catch (e) {
-            console.log('Error shield proposing', e);
+          return;
+        }
+        try {
+          const runProposeJson: RPCShieldProposeType = JSON.parse(
+            runPropose.value,
+          );
+          if (runProposeJson.error) {
+            console.log('Error shield proposing', runProposeJson.error);
+            return;
           }
+          if (runProposeJson.fee) {
+            proposeFee = runProposeJson.fee / 10 ** 8;
+          }
+          if (runProposeJson.value_to_shield) {
+            proposeAmount = runProposeJson.value_to_shield / 10 ** 8;
+          }
+        } catch (e) {
+          console.log('Error shield proposing', e);
+          return;
         }
         setShieldingFee(proposeFee);
         setShieldingAmount(proposeAmount);
@@ -130,11 +135,12 @@ export function useShieldFunds({
       cancelled = true;
     };
   }, [
+    focused,
     readOnly,
     setShieldingAmount,
-    totalBalance,
     totalBalance?.confirmedTransparentBalance,
-    somePending,
+    totalBalance?.totalTransparentBalance,
+    chainHeight,
     server,
   ]);
 
@@ -142,9 +148,9 @@ export function useShieldFunds({
     setShowShieldButton(
       !readOnly &&
         server.kind !== 'offline' &&
-        (somePending ? 0 : shieldingAmount) > 0,
+        shieldingAmount > 0,
     );
-  }, [readOnly, shieldingAmount, somePending, server]);
+  }, [readOnly, shieldingAmount, server]);
 
   const handleShieldFunds = useCallback(async () => {
     if (!setBackgroundError || !addLastSnackbar) {
@@ -173,9 +179,11 @@ export function useShieldFunds({
 
     setScrollToTop?.(true);
     setScrollToBottom?.(true);
-    setShieldingFee(0);
-    setShieldingAmount?.(0);
     const end = shieldEnd(shield, since);
+    if (end.phase === 'created') {
+      setShieldingFee(0);
+      setShieldingAmount?.(0);
+    }
     if (isOnTop(Route.Computing)) {
       navigation.navigate(Route.Computing, { ...end, subject });
     } else if (end.phase === 'failed') {
@@ -199,8 +207,8 @@ export function useShieldFunds({
   );
 
   const calculateDisableButtonToShield = useCallback(
-    (): boolean => (somePending ? 0 : shieldingAmount) <= 0,
-    [somePending, shieldingAmount],
+    (): boolean => shieldingAmount <= 0,
+    [shieldingAmount],
   );
 
   const onPressShieldFunds = useCallback(() => {

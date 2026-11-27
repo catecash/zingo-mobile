@@ -51,7 +51,10 @@ const SwapResult: React.FunctionComponent<SwapResultProps> = ({
   const { translate, info, totalBalance, addressBook } = context;
   const { colors } = useTheme();
   const record = useSwapRecord(recordId);
-  const shield = useShieldFunds(context);
+  const shield = useShieldFunds({
+    ...context,
+    chainHeight: context.info.latestBlock,
+  });
 
   const home = useCallback(() => leaveFlow(navigation), [navigation]);
   const swapAgain = useCallback(
